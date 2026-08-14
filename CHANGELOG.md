@@ -4,6 +4,36 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0] - 2026-08-14
+
+Installation was the biggest barrier to actually using this: every route
+went through "install these GTK packages yourself, then run three make
+targets". Native packages fix that properly, because a distro package is
+the only format that can both declare the GTK dependencies *and* ship the
+udev rules — a Flatpak or AppImage can do neither, and the udev rules are
+not optional.
+
+### Added
+
+- **Debian package.** `sudo apt install ./voltaic_*_all.deb` is now the
+  entire install on Debian, Ubuntu and Mint: dependencies come from the
+  package manager, the udev rules ship inside the package, and the
+  post-install step replays them against an already-plugged-in receiver, so
+  there is nothing to configure and nothing to replug. Build one with
+  `make deb`.
+- **PKGBUILD** for Arch and Manjaro.
+- **`install.sh`** for everything else — detects the distribution, prints
+  exactly what it will run, and asks before touching anything. Recognises
+  the Debian, Fedora, Arch and openSUSE families.
+- CI builds the `.deb`, installs it on a clean runner to prove the declared
+  dependencies are satisfiable and the maintainer scripts run, and attaches
+  it to tagged releases.
+
+### Changed
+
+- The README leads with the one-command installs; building from source is
+  now the last option rather than the only one.
+
 ## [1.1.0] - 2026-08-14
 
 ### Added

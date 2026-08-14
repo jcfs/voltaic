@@ -3,6 +3,7 @@ name: CI
 on:
   push:
     branches: [main]
+    tags: ["v*"]
   pull_request:
   workflow_dispatch:
 
@@ -86,3 +87,44 @@ jobs:
           if udevadm verify --help > /dev/null 2>&1; then
             udevadm verify packaging/60-voltaic.rules
           fi
+
+  deb:
+    name: Build .deb
+    runs-on: ubuntu-latest
+    # Needed only by the release-upload step on tag builds.
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Build the package
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq fakeroot
+          make deb
+
+      # Proves the declared dependencies are satisfiable and the maintainer
+      # scripts run — a package that cannot install is worse than none.
+      - name: Install it, and check it runs
+        run: |
+          sudo apt-get install -y ./build/voltaic_*_all.deb
+          voltaic --version
+          test -f /usr/lib/udev/rules.d/60-voltaic.rules
+          test -f /usr/share/icons/hicolor/scalable/apps/voltaic.svg
+          # No receiver on a runner, so this exits 1 having found nothing.
+          voltaic --list && rc=$? || rc=$?
+          test "$rc" -eq 1
+          sudo apt-get remove -y voltaic
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: voltaic-deb
+          path: build/*.deb
+
+      # Tag builds go straight onto the release, so the README's download
+      # link is never stale.
+      - name: Attach to the release
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release upload "${GITHUB_REF_NAME}" build/*.deb --clobber

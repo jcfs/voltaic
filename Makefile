@@ -9,7 +9,12 @@ BIN_DIR = $(PREFIX)/bin
 # from the distribution and must stay visible inside it.
 VENV_DIR ?= $(PREFIX)/share/voltaic/venv
 
-.PHONY: help install install-udev uninstall run list check verify test
+VERSION = $(shell python3 -c "import re,pathlib; \
+    print(re.search(r'^__version__ = \"([^\"]+)\"', \
+    pathlib.Path('voltaic/__init__.py').read_text(), re.M).group(1))")
+DEB_ROOT = build/deb/voltaic_$(VERSION)_all
+
+.PHONY: help install install-udev uninstall run list check verify test deb
 
 help:
 	@echo "Voltaic — Logitech battery levels in the system tray"
@@ -21,6 +26,7 @@ help:
 	@echo "  make check          verify runtime dependencies are present"
 	@echo "  make test           run the headless unit tests"
 	@echo "  make verify         check the tray hover/click behaviour"
+	@echo "  make deb            build a .deb that pulls in its own dependencies"
 	@echo "  make uninstall      remove the user installation"
 
 # Must run before `install`: without the ACL the app cannot open /dev/hidraw*.
@@ -86,6 +92,40 @@ run:
 
 list:
 	@python3 -m voltaic --list
+
+# A native package is the one format that can carry the udev rules as well as
+# declare the GTK dependencies, which turns the whole install into a single
+# command. Deliberately plain files, no venv: on a .deb the dependencies are
+# the package manager's job.
+deb:
+	rm -rf $(DEB_ROOT)
+	install -d $(DEB_ROOT)/DEBIAN
+	sed 's|@VERSION@|$(VERSION)|' packaging/debian/control.in \
+	    > $(DEB_ROOT)/DEBIAN/control
+	install -m 0755 packaging/debian/postinst $(DEB_ROOT)/DEBIAN/postinst
+	install -m 0755 packaging/debian/postrm $(DEB_ROOT)/DEBIAN/postrm
+
+	install -d $(DEB_ROOT)/usr/lib/python3/dist-packages/voltaic
+	install -m 0644 voltaic/*.py \
+	    $(DEB_ROOT)/usr/lib/python3/dist-packages/voltaic/
+
+	install -d $(DEB_ROOT)/usr/bin
+	printf '#!/usr/bin/python3\nimport sys\n\nfrom voltaic.__main__ import main\n\nsys.exit(main())\n' \
+	    > $(DEB_ROOT)/usr/bin/voltaic
+	chmod 0755 $(DEB_ROOT)/usr/bin/voltaic
+
+	install -Dm0644 packaging/60-voltaic.rules \
+	    $(DEB_ROOT)/usr/lib/udev/rules.d/60-voltaic.rules
+	install -Dm0644 packaging/voltaic.desktop \
+	    $(DEB_ROOT)/usr/share/applications/voltaic.desktop
+	install -Dm0644 packaging/voltaic.svg \
+	    $(DEB_ROOT)/usr/share/icons/hicolor/scalable/apps/voltaic.svg
+	install -Dm0644 LICENSE $(DEB_ROOT)/usr/share/doc/voltaic/copyright
+
+	fakeroot dpkg-deb --build $(DEB_ROOT) build/voltaic_$(VERSION)_all.deb
+	@echo
+	@echo "Built build/voltaic_$(VERSION)_all.deb"
+	@echo "Install it with:  sudo apt install ./build/voltaic_$(VERSION)_all.deb"
 
 # Parsing and model layers only — no display, no receiver, no GTK, which is
 # what lets these run in CI.

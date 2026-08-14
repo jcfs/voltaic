@@ -1,0 +1,24 @@
+#!/bin/sh
+set -e
+
+if [ "$1" = "configure" ]; then
+    # Rules only take effect as devices are enumerated. Reload, then replay
+    # them against the hidraw nodes that already exist, so the uaccess ACL
+    # applies to a receiver that is plugged in right now — without this the
+    # user would have to unplug and replug it before Voltaic could read
+    # anything.
+    if command -v udevadm > /dev/null 2>&1; then
+        udevadm control --reload-rules || true
+        udevadm trigger --subsystem-match=hidraw --action=change || true
+    fi
+
+    if command -v update-desktop-database > /dev/null 2>&1; then
+        update-desktop-database -q /usr/share/applications || true
+    fi
+
+    if command -v gtk-update-icon-cache > /dev/null 2>&1; then
+        gtk-update-icon-cache -q -f -t /usr/share/icons/hicolor || true
+    fi
+fi
+
+exit 0

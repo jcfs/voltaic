@@ -1,0 +1,45 @@
+# Maintainer: jcfs <jcfs@users.noreply.github.com>
+pkgname=voltaic
+pkgver=1.2.0
+pkgrel=1
+pkgdesc="Wireless device battery levels in the system tray (Logitech HID++ and AirPods)"
+arch=('any')
+url="https://github.com/jcfs/voltaic"
+license=('MIT')
+# GTK comes from the distribution on purpose: Voltaic has no PyPI dependencies.
+depends=('python' 'python-gobject' 'python-cairo' 'gtk3')
+optdepends=('xapp: native status icon on Cinnamon, MATE and Xfce'
+            'libappindicator-gtk3: status icon on desktops that only speak SNI')
+source=("$pkgname-$pkgver.tar.gz::$url/archive/refs/tags/v$pkgver.tar.gz")
+sha256sums=('SKIP')
+
+package() {
+    cd "$srcdir/$pkgname-$pkgver"
+
+    local site
+    site="$(python -c 'import site; print(site.getsitepackages()[0])')"
+    install -d "$pkgdir$site/voltaic"
+    install -m 0644 voltaic/*.py "$pkgdir$site/voltaic/"
+
+    install -d "$pkgdir/usr/bin"
+    cat > "$pkgdir/usr/bin/voltaic" <<'EOF'
+#!/usr/bin/python
+import sys
+
+from voltaic.__main__ import main
+
+sys.exit(main())
+EOF
+    chmod 0755 "$pkgdir/usr/bin/voltaic"
+
+    # The 60- prefix is load-bearing: systemd applies the uaccess ACL from
+    # 73-seat-late.rules, so the tag must be set by a file sorting before it.
+    install -Dm0644 packaging/60-voltaic.rules \
+        "$pkgdir/usr/lib/udev/rules.d/60-voltaic.rules"
+    install -Dm0644 packaging/voltaic.desktop \
+        "$pkgdir/usr/share/applications/voltaic.desktop"
+    install -Dm0644 packaging/voltaic.svg \
+        "$pkgdir/usr/share/icons/hicolor/scalable/apps/voltaic.svg"
+    install -Dm0644 LICENSE "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+    install -Dm0644 README.md "$pkgdir/usr/share/doc/$pkgname/README.md"
+}

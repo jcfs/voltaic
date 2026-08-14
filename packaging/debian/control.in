@@ -1,0 +1,21 @@
+Package: voltaic
+Version: @VERSION@
+Section: utils
+Priority: optional
+Architecture: all
+Maintainer: jcfs <jcfs@users.noreply.github.com>
+Depends: python3 (>= 3.9), python3-gi, python3-gi-cairo, python3-cairo, gir1.2-gtk-3.0
+Recommends: gir1.2-xapp-1.0
+Suggests: gir1.2-ayatanaappindicator3-0.1
+Homepage: https://github.com/jcfs/voltaic
+Description: Wireless device battery levels in the system tray
+ Voltaic shows the charge of Logitech keyboards and mice, and of AirPods
+ down to each earbud and the case, in a translucent tray panel. Hover the
+ icon for a gauge per device; click to keep it open.
+ .
+ It speaks Logitech's HID++ over /dev/hidraw and Apple's accessory protocol
+ over an L2CAP socket directly, using only the Python standard library.
+ Solaar is not required, and neither is root.
+ .
+ This package installs the udev rules that grant the logged-in user access
+ to the Logitech hidraw nodes, so no manual setup is needed.

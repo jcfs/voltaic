@@ -37,22 +37,38 @@ do want them brought up.
 
 ## Install
 
-### 1. System packages
+### Debian, Ubuntu, Mint
 
-GTK 3, PyGObject and pycairo come from your distribution — they are not
-installable from PyPI, and Voltaic needs no other Python packages at all.
+Download the `.deb` from the [latest release][releases] and:
 
-| Distribution | Command |
-| --- | --- |
-| Debian / Ubuntu / Mint | `sudo apt install python3-gi python3-cairo gir1.2-xapp-1.0` |
-| Fedora | `sudo dnf install python3-gobject python3-cairo xapps` |
-| Arch / Manjaro | `sudo pacman -S python-gobject python-cairo xapp` |
-| openSUSE | `sudo zypper install python3-gobject python3-cairo` |
+```sh
+sudo apt install ./voltaic_*_all.deb
+```
 
-The XApp package is optional; it is only used as a status-icon backend on
-Cinnamon, MATE and Xfce.
+That is the whole install. The package pulls in the GTK dependencies and
+ships the udev rules, and its post-install step replays them against the
+receiver you already have plugged in — so there is nothing to configure and
+nothing to replug. Then search for **Voltaic** in your launcher.
 
-### 2. Voltaic itself
+### Arch, Manjaro
+
+```sh
+curl -O https://raw.githubusercontent.com/jcfs/voltaic/main/packaging/PKGBUILD
+makepkg -si
+```
+
+### Anything else
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/jcfs/voltaic/main/install.sh | sh
+```
+
+It works out your distribution, shows you exactly what it will run, and asks
+before touching anything. Two steps use sudo: installing the GTK packages,
+and installing the udev rules. Fedora, openSUSE, Arch and the Debian family
+are recognised; pass `-y` to skip the prompt.
+
+### From source
 
 ```sh
 git clone https://github.com/jcfs/voltaic
@@ -64,8 +80,18 @@ make install          # install for the current user
 voltaic               # run it
 ```
 
-Then enable **Start at login** from the tray icon's right-click menu, or
-search for **Voltaic** in your application launcher.
+You need GTK 3, PyGObject and pycairo from your distribution first — they do
+not come from PyPI, and Voltaic needs no other Python packages at all:
+
+| Distribution | Command |
+| --- | --- |
+| Debian / Ubuntu / Mint | `sudo apt install python3-gi python3-cairo gir1.2-xapp-1.0` |
+| Fedora | `sudo dnf install python3-gobject python3-cairo xapps` |
+| Arch / Manjaro | `sudo pacman -S python-gobject python-cairo xapp` |
+| openSUSE | `sudo zypper install python3-gobject python3-cairo` |
+
+The XApp package is optional; it is only used as a status-icon backend on
+Cinnamon, MATE and Xfce.
 
 `make install` puts Voltaic in a private virtualenv under
 `~/.local/share/voltaic/venv` and links it into `~/.local/bin`. The venv is
@@ -75,9 +101,11 @@ that enforce [PEP 668](https://peps.python.org/pep-0668/) — Ubuntu 24.04,
 Debian 12 and Fedora 39 among them — where `pip install --user` is refused
 outright.
 
-Remove it again with `make uninstall`.
+Remove it again with `make uninstall`. Build your own `.deb` with `make deb`.
 
-### 3. Check the setup
+[releases]: https://github.com/jcfs/voltaic/releases/latest
+
+### Check the setup
 
 ```sh
 make check
