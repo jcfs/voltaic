@@ -412,8 +412,8 @@ class VoltaicPopup(Gtk.Window):
         title = Gtk.Label(label="VOLTAIC", xalign=0.0)
         title.get_style_context().add_class("voltaic-title")
         header.pack_start(title, False, False, 0)
-        count = Gtk.Label(label=f"{len(devices)} device{'s' if len(devices) != 1 else ''}",
-                          xalign=1.0)
+        plural = "s" if len(devices) != 1 else ""
+        count = Gtk.Label(label=f"{len(devices)} device{plural}", xalign=1.0)
         count.get_style_context().add_class("voltaic-title")
         header.pack_end(count, False, False, 0)
         self.content.pack_start(header, False, False, 0)
@@ -470,7 +470,8 @@ class VoltaicPopup(Gtk.Window):
         # On a tray that supports hover this panel appears on its own and
         # closes when the pointer leaves, so the useful hint is that a click
         # keeps it open; elsewhere a click is the only way in.
-        hint = "click to keep open" if self.hover_capable else "click the icon to refresh"
+        hint = ("click to keep open" if self.hover_capable
+                else "click the icon to refresh")
         return f"Updated {when}  ·  {hint}"
 
     @staticmethod

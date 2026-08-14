@@ -1,0 +1,78 @@
+name: Bug report
+description: Something does not work
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the report. The two outputs below answer most questions
+        about device support up front — neither contains personal data,
+        only product names.
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: What did you expect, and what happened instead?
+    validations:
+      required: true
+
+  - type: textarea
+    id: list-output
+    attributes:
+      label: Output of `voltaic --list`
+      render: text
+    validations:
+      required: true
+
+  - type: textarea
+    id: check-output
+    attributes:
+      label: Output of `make check`
+      render: text
+    validations:
+      required: true
+
+  - type: input
+    id: distro
+    attributes:
+      label: Distribution and version
+      placeholder: Ubuntu 24.04
+    validations:
+      required: true
+
+  - type: input
+    id: desktop
+    attributes:
+      label: Desktop environment and session type
+      description: "`echo $XDG_CURRENT_DESKTOP $XDG_SESSION_TYPE`"
+      placeholder: X-Cinnamon x11
+    validations:
+      required: true
+
+  - type: dropdown
+    id: transport
+    attributes:
+      label: Which devices are affected
+      options:
+        - Logitech behind a receiver
+        - Logitech over Bluetooth
+        - AirPods or Beats
+        - The tray icon or panel itself
+        - Something else
+    validations:
+      required: true
+
+  - type: input
+    id: hardware
+    attributes:
+      label: Device and receiver model
+      placeholder: MX Master 4 behind a Bolt receiver
+
+  - type: checkboxes
+    id: solaar
+    attributes:
+      label: Checks
+      options:
+        - label: Solaar was not running at the same time (only one HID++ client can poll a node)
+        - label: I ran `make install-udev` and `make rebind`, or replugged the receiver

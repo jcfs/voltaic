@@ -1,0 +1,58 @@
+name: Device support
+description: A device is not detected, or reports the wrong battery
+labels: [device support]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Voltaic speaks HID++ and Apple's AAP directly, and both vary between
+        models and firmware revisions. Reports about hardware I cannot test
+        are the main way coverage improves.
+
+  - type: input
+    id: device
+    attributes:
+      label: Device
+      placeholder: MX Anywhere 3S
+    validations:
+      required: true
+
+  - type: dropdown
+    id: transport
+    attributes:
+      label: How is it connected
+      options:
+        - Unifying receiver
+        - Bolt receiver
+        - Nano receiver
+        - Bluetooth, paired directly to the host
+        - USB cable
+        - AirPods or Beats over Bluetooth
+    validations:
+      required: true
+
+  - type: textarea
+    id: symptom
+    attributes:
+      label: What does Voltaic show
+      description: Missing entirely, wrong level, stuck value, or "unknown"?
+    validations:
+      required: true
+
+  - type: textarea
+    id: list-output
+    attributes:
+      label: Output of `voltaic --list`
+      render: text
+    validations:
+      required: true
+
+  - type: textarea
+    id: solaar
+    attributes:
+      label: What does Solaar say, if you have it
+      description: >
+        `solaar show` for the same device is useful for comparison. Quit
+        Voltaic first — two HID++ clients on one node steal each other's
+        replies.
+      render: text

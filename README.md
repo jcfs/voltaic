@@ -1,5 +1,8 @@
 # Voltaic
 
+[![CI](https://github.com/jcfs/voltaic/actions/workflows/ci.yml/badge.svg)](https://github.com/jcfs/voltaic/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
 Wireless device battery levels in the Linux system tray — Logitech keyboards
 and mice, and AirPods down to each earbud and the case. Hover the icon for a
 translucent panel with a gauge per device; click to keep it open.
@@ -34,26 +37,47 @@ do want them brought up.
 
 ## Install
 
+### 1. System packages
+
+GTK 3, PyGObject and pycairo come from your distribution — they are not
+installable from PyPI, and Voltaic needs no other Python packages at all.
+
+| Distribution | Command |
+| --- | --- |
+| Debian / Ubuntu / Mint | `sudo apt install python3-gi python3-cairo gir1.2-xapp-1.0` |
+| Fedora | `sudo dnf install python3-gobject python3-cairo xapps` |
+| Arch / Manjaro | `sudo pacman -S python-gobject python-cairo xapp` |
+| openSUSE | `sudo zypper install python3-gobject python3-cairo` |
+
+The XApp package is optional; it is only used as a status-icon backend on
+Cinnamon, MATE and Xfce.
+
+### 2. Voltaic itself
+
 ```sh
+git clone https://github.com/jcfs/voltaic
+cd voltaic
+
 make install-udev     # grant hidraw access (asks for sudo) — do this first
 make rebind           # re-enumerate the receiver so the rules apply now
 make install          # install for the current user
 voltaic               # run it
 ```
 
-Then enable **Start at login** from the tray icon's right-click menu.
+Then enable **Start at login** from the tray icon's right-click menu, or
+search for **Voltaic** in your application launcher.
 
-`make install-udev` writes `/etc/udev/rules.d/60-voltaic.rules`, which tags
-Logitech hidraw nodes with `uaccess` so the logged-in user can open them. The
-rules only apply to devices as they are enumerated, which is why `make rebind`
-(or physically replugging the receiver) is needed the first time.
+`make install` puts Voltaic in a private virtualenv under
+`~/.local/share/voltaic/venv` and links it into `~/.local/bin`. The venv is
+created with `--system-site-packages` so the distribution's GTK stays
+visible inside it; this is also what makes the install work on distributions
+that enforce [PEP 668](https://peps.python.org/pep-0668/) — Ubuntu 24.04,
+Debian 12 and Fedora 39 among them — where `pip install --user` is refused
+outright.
 
-The `60-` prefix matters: systemd adds the ACL from `73-seat-late.rules`,
-which matches on the `uaccess` tag, so the tag has to be set by a file that
-sorts before it. A higher number leaves the node `root:root 0600` and Voltaic
-finds a HID++ node it cannot open — no devices, no error.
+Remove it again with `make uninstall`.
 
-To check your setup before installing:
+### 3. Check the setup
 
 ```sh
 make check
@@ -65,6 +89,45 @@ pycairo        ok
 XApp           ok
 HID++ node     /dev/hidraw3
 ```
+
+### About the udev rules
+
+`make install-udev` writes `/etc/udev/rules.d/60-voltaic.rules`, which tags
+Logitech hidraw nodes with `uaccess` so the logged-in user can open them. The
+rules only apply to devices as they are enumerated, which is why `make rebind`
+(or physically replugging the receiver) is needed the first time.
+
+The `60-` prefix matters: systemd adds the ACL from `73-seat-late.rules`,
+which matches on the `uaccess` tag, so the tag has to be set by a file that
+sorts before it. A higher number leaves the node `root:root 0600` and Voltaic
+finds a HID++ node it cannot open — no devices, no error.
+
+## Troubleshooting
+
+**Nothing happens when I launch it.** The GTK stack is missing. Run `voltaic`
+from a terminal and it will name the packages to install; launched from a
+desktop shortcut it shows the same message in a dialog.
+
+**The panel says "Permission denied on /dev/hidraw…".** The udev rules are
+not installed, or they were installed but the receiver has not been
+re-enumerated since. Run `make install-udev && make rebind`. Confirm it
+worked with `getfacl /dev/hidraw0 | grep $USER`, which should show a
+`user:<you>:rw-` line.
+
+**My Logitech devices are missing but the receiver is plugged in.** Check
+`make check` reports a HID++ node. If it says none found, the receiver may be
+a non-HID++ model. If a node is listed but no devices appear, make sure
+Solaar is not running — only one HID++ client can poll a node at a time.
+
+**AirPods do not appear.** They must already be connected; Voltaic will not
+bring up an audio device unasked, because that would hijack your sound
+output. Use the **Connect** button on the offline row. `voltaic --list` says
+explicitly when the Bluetooth stack itself could not be reached.
+
+**The tray icon is missing on GNOME.** GNOME dropped tray icons; you need an
+extension such as AppIndicator Support, after which `--tray appindicator`
+works. Hover-to-open is unavailable on that backend — see
+[Requirements](#requirements).
 
 ## Usage
 
@@ -137,11 +200,7 @@ other two exist — but nothing in the modern tray protocols replaces the two
 things it reports, so it stays the preferred backend while it works. Override
 with `--tray` if your desktop mishandles XEmbed icons.
 
-On Debian/Ubuntu/Mint:
-
-```sh
-sudo apt install python3-gi python3-cairo gir1.2-xapp-1.0
-```
+See [Install](#1-system-packages) for the package names on each distribution.
 
 ## How it works
 
@@ -219,6 +278,22 @@ each may occasionally miss a notification the other consumed.
 | `voltaic/icons.py` | Cairo-rendered tray icon, cached per level |
 | `voltaic/theme.py` | Shared colours, geometry and cairo helpers |
 
+## Development
+
+```sh
+make run      # run from the checkout without installing
+make test     # headless unit tests — no display, receiver or GTK needed
+make verify   # tray hover/click behaviour; needs a real desktop
+```
+
+The protocol and model layers are standard library only, which is what lets
+`make test` run in CI on a machine with no GTK and no hardware. Keep it that
+way: an accidental top-level `import gi` in those modules will fail the
+build. See [CONTRIBUTING.md](CONTRIBUTING.md).
+
+Regenerate the README images after a UI change with
+`python3 packaging/make-screenshot.py` (add `--connect` for the second one).
+
 ## Licence
 
-MIT.
+MIT — see [LICENSE](LICENSE).

@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
+  <title>Voltaic</title>
+  <!--
+    The app icon is the panel's own gauge: a ring three-quarters full in the
+    "good" green (#4ADE80), with the charging bolt in #38BDF8. Colours and
+    proportions are taken from voltaic/theme.py so the launcher entry, the
+    tray icon and the panel all read as the same object.
+  -->
+  <defs>
+    <linearGradient id="surface" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#18181D"/>
+      <stop offset="1" stop-color="#0F0F13"/>
+    </linearGradient>
+    <linearGradient id="arc" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#4ADE80"/>
+      <stop offset="1" stop-color="#22C55E"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Rounded dark tile, matching the panel surface. -->
+  <rect x="4" y="4" width="120" height="120" rx="28" fill="url(#surface)"/>
+  <rect x="4.75" y="4.75" width="118.5" height="118.5" rx="27.25"
+        fill="none" stroke="#FFFFFF" stroke-opacity="0.17" stroke-width="1.5"/>
+
+  <!-- Track: the unfilled part of the ring. -->
+  <circle cx="64" cy="64" r="36" fill="none"
+          stroke="#FFFFFF" stroke-opacity="0.13" stroke-width="10"/>
+
+  <!-- Charge arc, 75% clockwise from twelve o'clock. Circumference is
+       2*pi*36 = 226.19; 75% of that is 169.65. -->
+  <circle cx="64" cy="64" r="36" fill="none"
+          stroke="url(#arc)" stroke-width="10" stroke-linecap="round"
+          stroke-dasharray="169.65 226.19"
+          transform="rotate(-90 64 64)"/>
+
+  <!-- Bolt, centred in the ring. -->
+  <path d="M70.5 40 L52 68.5 H62.5 L57.5 88 L76 59.5 H65.5 Z"
+        fill="#38BDF8"/>
+</svg>

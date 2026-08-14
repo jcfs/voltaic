@@ -2,11 +2,11 @@
 Type=Application
 Name=Voltaic
 GenericName=Device Battery Monitor
-Comment=Logitech keyboard and mouse battery levels in the system tray
+Comment=Battery levels for Logitech devices and AirPods in the system tray
 Exec=voltaic
-Icon=battery
+Icon=voltaic
 Terminal=false
-Categories=Utility;System;Monitor;
-Keywords=battery;logitech;mouse;keyboard;mx;tray;
+Categories=System;Monitor;
+Keywords=battery;logitech;mouse;keyboard;mx;airpods;earbuds;tray;charge;
 StartupNotify=false
 X-GNOME-Autostart-enabled=true

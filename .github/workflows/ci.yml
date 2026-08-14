@@ -1,0 +1,88 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Tests (Python ${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # The floor comes from pyproject's requires-python.
+        python-version: ["3.9", "3.10", "3.11", "3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      # No GTK is installed on purpose. The protocol and model layers are
+      # standard library only, and this run is what proves they stay that
+      # way — an accidental top-level `import gi` fails here.
+      - name: Run headless unit tests
+        run: python -m unittest discover -s tests -p 'test_*.py' -v
+
+      - name: Check the CLI degrades without GTK
+        run: |
+          python -m voltaic --version
+          python -m voltaic --help > /dev/null
+          # No receiver on a CI runner, so --list exits 1 having found
+          # nothing; it must say so rather than trace back.
+          python -m voltaic --list && rc=$? || rc=$?
+          test "$rc" -eq 1
+
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install ruff
+        run: pip install ruff
+
+      - name: Lint
+        run: ruff check .
+
+      - name: Check formatting is not wildly off
+        run: ruff format --diff . || true
+
+  package:
+    name: Build and validate package
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Build
+        run: |
+          pip install build twine
+          python -m build
+
+      - name: Validate metadata
+        run: twine check dist/*
+
+      - name: Validate the desktop entry and udev rules
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq desktop-file-utils
+          desktop-file-validate packaging/voltaic.desktop
+          # udevadm verify landed in systemd 254; skip it on older runners.
+          if udevadm verify --help > /dev/null 2>&1; then
+            udevadm verify packaging/60-voltaic.rules
+          fi

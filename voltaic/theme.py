@@ -51,7 +51,8 @@ CELL_RING_SIZE = 36  # one cell of a multi-part device (earbud, case)
 RING_THICKNESS = 4.0
 
 
-def level_color(percent: int | None, charging: bool = False) -> tuple[float, float, float]:
+def level_color(percent: int | None,
+                charging: bool = False) -> tuple[float, float, float]:
     """Pick the accent colour for a battery reading."""
     if charging:
         return CHARGING

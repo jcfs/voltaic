@@ -4,7 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "voltaic"
-version = "1.0.0"
+# Single source of truth: voltaic/__init__.py
+dynamic = ["version"]
 description = "Logitech device battery levels in the Linux system tray"
 readme = "README.md"
 requires-python = ">=3.9"
@@ -31,3 +32,23 @@ voltaic = "voltaic.__main__:main"
 
 [tool.setuptools]
 packages = ["voltaic"]
+
+[tool.setuptools.dynamic]
+version = { attr = "voltaic.__version__" }
+
+[tool.ruff]
+line-length = 88
+target-version = "py39"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "B", "UP", "I"]
+ignore = [
+    # GTK's version negotiation has to run before the imports it guards,
+    # so module-level imports legitimately follow other statements.
+    "E402",
+]
+
+[tool.ruff.lint.per-file-ignores]
+# Tests reach into private helpers on purpose — the parsing internals are
+# exactly what needs pinning down.
+"tests/*" = ["E501"]

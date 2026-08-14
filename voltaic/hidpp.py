@@ -15,8 +15,15 @@ import os
 import select
 import time
 
-from .model import (CHARGE_CHARGING, CHARGE_DISCHARGING, CHARGE_ERROR,
-                    CHARGE_FULL, CHARGE_SLOW, Battery, Device)
+from .model import (
+    CHARGE_CHARGING,
+    CHARGE_DISCHARGING,
+    CHARGE_ERROR,
+    CHARGE_FULL,
+    CHARGE_SLOW,
+    Battery,
+    Device,
+)
 
 __all__ = ["Battery", "Device", "enumerate_devices", "scan_connection",
            "find_hidpp_paths", "HidppDevice", "HidppError"]
@@ -247,7 +254,7 @@ class HidppDevice:
             finally:
                 self.fd = None
 
-    def __enter__(self) -> "HidppDevice":
+    def __enter__(self) -> HidppDevice:
         return self
 
     def __exit__(self, *exc) -> None:
@@ -444,7 +451,8 @@ class HidppDevice:
         )
         return battery
 
-    def read_battery(self, device_index: int, features: dict[int, int]) -> Battery | None:
+    def read_battery(self, device_index: int,
+                     features: dict[int, int]) -> Battery | None:
         """Try each battery feature the device advertises, best first."""
         attempts = (
             (FEATURE_UNIFIED_BATTERY, self.unified_battery),

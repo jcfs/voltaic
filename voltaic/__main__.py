@@ -4,16 +4,63 @@ from __future__ import annotations
 
 import argparse
 import os
+import shutil
 import socket
+import subprocess
 import sys
 
+from . import __version__
 from .monitor import DEFAULT_INTERVAL
-
-__version__ = "1.0.0"
 
 # Mirrors tray.BACKENDS, duplicated so `--list` and `--help` do not have to
 # import GTK just to parse arguments.
 BACKENDS = ("auto", "xembed", "xapp", "appindicator")
+
+# GTK, PyGObject and pycairo come from the distribution rather than from PyPI,
+# so a missing one cannot be fixed by pip and the install command differs per
+# distro. Keyed by the package manager binary we can look for on PATH.
+DEP_COMMANDS = (
+    ("apt", "sudo apt install python3-gi python3-cairo gir1.2-xapp-1.0"),
+    ("dnf", "sudo dnf install python3-gobject python3-cairo xapps"),
+    ("pacman", "sudo pacman -S python-gobject python-cairo xapp"),
+    ("zypper", "sudo zypper install python3-gobject python3-cairo"),
+    ("apk", "sudo apk add py3-gobject3 py3-cairo"),
+)
+
+
+def _install_hint() -> str:
+    for manager, command in DEP_COMMANDS:
+        if shutil.which(manager):
+            return command
+    return "Install PyGObject, GTK 3 and pycairo from your distribution."
+
+
+def _report_missing_deps(exc: Exception) -> None:
+    """Explain a missing GTK stack somewhere the user will actually see it.
+
+    Launched from a desktop entry there is no terminal, so a traceback on
+    stderr goes nowhere and the app simply appears not to start. Fall back
+    through whatever dialog tools exist before giving up on being seen.
+    """
+    message = (f"Voltaic needs GTK 3 and PyGObject, which are missing "
+               f"({exc}).\n\n{_install_hint()}")
+    print(message, file=sys.stderr)
+
+    dialogs = (
+        ["zenity", "--error", "--no-wrap", "--title=Voltaic",
+         f"--text={message}"],
+        ["kdialog", "--title", "Voltaic", "--error", message],
+        ["xmessage", "-center", message],
+        ["notify-send", "--urgency=critical", "Voltaic", message],
+    )
+    for argv in dialogs:
+        if not shutil.which(argv[0]):
+            continue
+        try:
+            subprocess.run(argv, check=False, timeout=120)
+            return
+        except (OSError, subprocess.SubprocessError):
+            continue
 
 
 def _claim_single_instance() -> socket.socket | None:
@@ -26,7 +73,7 @@ def _claim_single_instance() -> socket.socket | None:
     """
     sock = socket.socket(socket.AF_UNIX, socket.SOCK_DGRAM)
     try:
-        sock.bind("\0voltaic-tray-%d" % os.getuid())
+        sock.bind(f"\0voltaic-tray-{os.getuid()}")
     except OSError:
         sock.close()
         return None
@@ -35,6 +82,7 @@ def _claim_single_instance() -> socket.socket | None:
 
 def _print_devices() -> int:
     from .airpods import enumerate_airpods
+    from .airpods import unavailable_reason as airpods_unavailable_reason
     from .hidpp import enumerate_devices, find_hidpp_paths
     from .state import describe_age, reconcile
 
@@ -50,8 +98,14 @@ def _print_devices() -> int:
             return 1
     try:
         devices.extend(enumerate_airpods())
-    except Exception:
-        pass
+    except Exception as exc:  # a broken Bluetooth stack must not hide HID++
+        print(f"Bluetooth scan failed: {exc}", file=sys.stderr)
+    else:
+        # An empty result is normal (nothing paired), but it also happens
+        # when there is no Bluetooth stack to ask — say which.
+        reason = airpods_unavailable_reason()
+        if reason:
+            print(reason, file=sys.stderr)
 
     if not devices:
         print("No devices found. Is the receiver plugged in, or a "
@@ -104,12 +158,19 @@ def main(argv: list[str] | None = None) -> int:
     if args.list:
         return _print_devices()
 
+    # Import before taking the lock: a machine without GTK should report that
+    # rather than hold a lock it is about to drop anyway.
+    try:
+        from .app import run
+    except ImportError as exc:
+        _report_missing_deps(exc)
+        return 1
+
     lock = _claim_single_instance()
     if lock is None:
         print("Voltaic is already running.", file=sys.stderr)
         return 1
 
-    from .app import run
     try:
         return run(interval=args.interval, notify=not args.no_notify,
                    tray_backend=args.tray)

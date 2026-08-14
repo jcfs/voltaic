@@ -17,8 +17,15 @@ import select
 import socket
 import time
 
-from .model import (CHARGE_CHARGING, CHARGE_DISCHARGING, CHARGE_DISCONNECTED,
-                    CHARGE_FULL, Battery, Cell, Device)
+from .model import (
+    CHARGE_CHARGING,
+    CHARGE_DISCHARGING,
+    CHARGE_DISCONNECTED,
+    CHARGE_FULL,
+    Battery,
+    Cell,
+    Device,
+)
 
 # Apple's AAP vendor service, advertised by AirPods and Beats.
 AAP_UUID = "74ec2172-0bad-4d01-8f77-997b2be0722a"
@@ -76,13 +83,32 @@ class AirPodsError(Exception):
 # ---------------------------------------------------------------------------
 
 
+# Why the last discovery came up empty-handed, when the cause was the stack
+# rather than the absence of accessories. "No AirPods paired" and "there is no
+# Bluetooth stack to ask" both yield an empty list, and a user debugging a
+# missing device needs to know which one they are looking at.
+_unavailable: str | None = None
+
+
+def unavailable_reason() -> str | None:
+    """Why Bluetooth scanning could not run, or None if it ran fine.
+
+    Meaningful only after a discovery attempt; an empty device list with a
+    reason of None means Bluetooth worked and simply found nothing.
+    """
+    return _unavailable
+
+
 def _managed_objects():
     """(bus, objects) from BlueZ, or (None, {}) if Bluetooth is unavailable."""
+    global _unavailable
     try:
         import gi
         gi.require_version("Gio", "2.0")
         from gi.repository import Gio
     except (ImportError, ValueError):
+        _unavailable = ("PyGObject is not installed, so Bluetooth "
+                        "accessories were not scanned.")
         return None, {}
 
     try:
@@ -91,8 +117,11 @@ def _managed_objects():
             "org.bluez", "/", "org.freedesktop.DBus.ObjectManager",
             "GetManagedObjects", None, None,
             Gio.DBusCallFlags.NONE, 2000, None)
-    except Exception:
+    except Exception as exc:
+        _unavailable = (f"BlueZ did not answer on D-Bus ({type(exc).__name__}) "
+                        "— is the bluetooth service running?")
         return None, {}
+    _unavailable = None
     return bus, reply.unpack()[0]
 
 
@@ -105,7 +134,7 @@ def discover() -> list[tuple[str, str, bool]]:
     """
     _bus, objects = _managed_objects()
     found = []
-    for path, interfaces in objects.items():
+    for _path, interfaces in objects.items():
         device = interfaces.get("org.bluez.Device1")
         if not device:
             continue

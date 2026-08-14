@@ -1,6 +1,7 @@
 PREFIX ?= $(HOME)/.local
 UDEV_DIR ?= /etc/udev/rules.d
 DESKTOP_DIR = $(PREFIX)/share/applications
+ICON_DIR = $(PREFIX)/share/icons/hicolor/scalable/apps
 BIN_DIR = $(PREFIX)/bin
 # Distributions that follow PEP 668 (Ubuntu 24.04, Debian 12, Fedora 39+)
 # refuse `pip install --user` outright, so install into a private venv. It is
@@ -8,7 +9,7 @@ BIN_DIR = $(PREFIX)/bin
 # from the distribution and must stay visible inside it.
 VENV_DIR ?= $(PREFIX)/share/voltaic/venv
 
-.PHONY: help install install-udev uninstall run list check verify
+.PHONY: help install install-udev uninstall run list check verify test
 
 help:
 	@echo "Voltaic — Logitech battery levels in the system tray"
@@ -18,6 +19,7 @@ help:
 	@echo "  make run            run from this checkout without installing"
 	@echo "  make list           print battery levels and exit"
 	@echo "  make check          verify runtime dependencies are present"
+	@echo "  make test           run the headless unit tests"
 	@echo "  make verify         check the tray hover/click behaviour"
 	@echo "  make uninstall      remove the user installation"
 
@@ -54,6 +56,8 @@ install:
 	$(VENV_DIR)/bin/pip install --quiet --upgrade .
 	install -d $(BIN_DIR)
 	ln -sf $(VENV_DIR)/bin/voltaic $(BIN_DIR)/voltaic
+	install -d $(ICON_DIR)
+	install -m 0644 packaging/voltaic.svg $(ICON_DIR)/voltaic.svg
 	install -d $(DESKTOP_DIR)
 	# The launcher resolves Exec against the session's PATH, which does not
 	# always include ~/.local/bin. Bake in the absolute path instead.
@@ -61,6 +65,7 @@ install:
 	    > $(DESKTOP_DIR)/voltaic.desktop
 	chmod 0644 $(DESKTOP_DIR)/voltaic.desktop
 	-update-desktop-database $(DESKTOP_DIR) 2>/dev/null
+	-gtk-update-icon-cache -f -t $(PREFIX)/share/icons/hicolor 2>/dev/null
 	@echo
 	@echo "Installed. Start it with:  $(BIN_DIR)/voltaic"
 	@echo "or search for Voltaic in your application launcher."
@@ -70,15 +75,22 @@ uninstall:
 	rm -rf $(VENV_DIR)
 	rm -f $(BIN_DIR)/voltaic
 	rm -f $(DESKTOP_DIR)/voltaic.desktop
+	rm -f $(ICON_DIR)/voltaic.svg
 	rm -f $(HOME)/.config/autostart/voltaic.desktop
 	rm -rf $(HOME)/.cache/voltaic
 	-update-desktop-database $(DESKTOP_DIR) 2>/dev/null
+	-gtk-update-icon-cache -f -t $(PREFIX)/share/icons/hicolor 2>/dev/null
 
 run:
 	python3 -m voltaic
 
 list:
 	@python3 -m voltaic --list
+
+# Parsing and model layers only — no display, no receiver, no GTK, which is
+# what lets these run in CI.
+test:
+	@python3 -m unittest discover -s tests -p 'test_*.py'
 
 # Needs a real tray, so quit any running instance first: two copies would
 # fight over the hidraw node.

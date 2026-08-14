@@ -83,7 +83,8 @@ class Monitor(threading.Thread):
         if not self._conns:
             if denied:
                 return ("Permission denied on " + ", ".join(denied) + ".\n"
-                        "Install the udev rules, then replug the receiver.")
+                        "Install 60-voltaic.rules, then replug the receiver "
+                        "(see the Troubleshooting section of the README).")
             return "Found a receiver but could not open it."
         return None
 
