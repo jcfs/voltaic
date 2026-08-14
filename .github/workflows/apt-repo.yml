@@ -1,0 +1,119 @@
+name: Publish apt repository
+
+# Rebuilds the signed apt archive on every tagged release, so
+# `apt install voltaic` and `apt upgrade` work without anyone downloading a
+# .deb by hand. Runnable by hand too, for fixing the repo without cutting a
+# release.
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: apt-repo
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    name: Build and publish the archive
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Install packaging tools
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq fakeroot lintian apt-utils
+
+      - name: Build the package
+        run: make deb
+
+      - name: Check it against policy before publishing it
+        run: lintian --fail-on error,warning --tag-display-limit 0 build/*.deb
+
+      - name: Import the archive signing key
+        env:
+          PRIVATE_KEY: ${{ secrets.APT_GPG_PRIVATE_KEY }}
+        run: |
+          if [ -z "$PRIVATE_KEY" ]; then
+            echo "::error::APT_GPG_PRIVATE_KEY is not set — an unsigned apt"\
+                 "repository would make every user pass [trusted=yes]."
+            exit 1
+          fi
+          printf '%s' "$PRIVATE_KEY" | gpg --batch --import
+          gpg --list-secret-keys --keyid-format LONG
+
+      - name: Lay out the archive
+        run: |
+          set -eu
+          ROOT=public
+          # Debian's own layout: packages live in pool/, indexes in dists/.
+          mkdir -p "$ROOT/pool/main/v/voltaic"
+          cp build/*.deb "$ROOT/pool/main/v/voltaic/"
+
+          # The package is Architecture: all, but apt only looks in the
+          # binary-<arch> directory matching the client, so the same index
+          # is published under each architecture people actually run.
+          for arch in all amd64 arm64 i386; do
+            dir="$ROOT/dists/stable/main/binary-$arch"
+            mkdir -p "$dir"
+            (cd "$ROOT" && apt-ftparchive --arch "$arch" packages pool) \
+              > "$dir/Packages"
+            gzip -9kf "$dir/Packages"
+            printf 'Archive: stable\nComponent: main\nOrigin: Voltaic\nLabel: Voltaic\nArchitecture: %s\n' \
+              "$arch" > "$dir/Release"
+          done
+
+      - name: Generate and sign the Release file
+        run: |
+          set -eu
+          cat > /tmp/apt-release.conf <<'EOF'
+          APT::FTPArchive::Release::Origin "Voltaic";
+          APT::FTPArchive::Release::Label "Voltaic";
+          APT::FTPArchive::Release::Suite "stable";
+          APT::FTPArchive::Release::Codename "stable";
+          APT::FTPArchive::Release::Architectures "all amd64 arm64 i386";
+          APT::FTPArchive::Release::Components "main";
+          APT::FTPArchive::Release::Description "Voltaic — battery levels in the system tray";
+          EOF
+          apt-ftparchive -c /tmp/apt-release.conf release public/dists/stable \
+            > public/dists/stable/Release
+
+          # Both signatures: InRelease is what modern apt fetches, Release.gpg
+          # is the detached fallback older clients still ask for.
+          gpg --batch --yes --clearsign \
+            -o public/dists/stable/InRelease public/dists/stable/Release
+          gpg --batch --yes --armor --detach-sign \
+            -o public/dists/stable/Release.gpg public/dists/stable/Release
+
+          cp packaging/voltaic-archive-keyring.asc public/KEY.gpg
+
+      - name: Verify the archive the way apt will
+        run: |
+          set -eu
+          gpg --verify public/dists/stable/InRelease
+          gpg --verify public/dists/stable/Release.gpg public/dists/stable/Release
+          grep -q '^Package: voltaic$' public/dists/stable/main/binary-amd64/Packages
+          echo "signed archive verified"
+
+      - name: Write the landing page
+        run: |
+          VERSION=$(dpkg-deb -f build/*.deb Version)
+          sed "s/@VERSION@/$VERSION/g" packaging/apt-index.html.in > public/index.html
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: public
+
+      - id: deploy
+        uses: actions/deploy-pages@v4

@@ -39,16 +39,25 @@ do want them brought up.
 
 ### Debian, Ubuntu, Mint
 
-Download the `.deb` from the [latest release][releases] and:
-
 ```sh
-sudo apt install ./voltaic_*_all.deb
+curl -fsSL https://jcfs.github.io/voltaic/KEY.gpg \
+  | sudo gpg --dearmor -o /usr/share/keyrings/voltaic-archive-keyring.gpg
+
+echo "deb [signed-by=/usr/share/keyrings/voltaic-archive-keyring.gpg] \
+https://jcfs.github.io/voltaic stable main" \
+  | sudo tee /etc/apt/sources.list.d/voltaic.list
+
+sudo apt update && sudo apt install voltaic
 ```
 
-That is the whole install. The package pulls in the GTK dependencies and
-ships the udev rules, and its post-install step replays them against the
-receiver you already have plugged in — so there is nothing to configure and
-nothing to replug. Then search for **Voltaic** in your launcher.
+Updates then arrive with `apt upgrade` like any other package. The package
+pulls in the GTK dependencies and ships the udev rules, and its post-install
+step replays them against the receiver you already have plugged in — so
+there is nothing to configure and nothing to replug. Then search for
+**Voltaic** in your launcher.
+
+Prefer a single file? The `.deb` is on the [latest release][releases] too:
+`sudo apt install ./voltaic_*_all.deb`. You lose automatic updates.
 
 ### Arch, Manjaro
 
