@@ -1,0 +1,26 @@
+# Voltaic — let the logged-in user talk HID++ to Logitech devices.
+#
+# The kernel creates /dev/hidraw* owned by root with mode 0600. TAG+="uaccess"
+# asks systemd-logind to add an ACL for whoever is sitting at the seat, which
+# is what lets Voltaic run as a normal user instead of as root.
+#
+# The 60- prefix is load-bearing. systemd applies the ACL from
+# 73-seat-late.rules, which matches TAG=="uaccess" — so the tag has to be set
+# by a file that sorts *before* it. Numbered 99-, the tag lands too late, the
+# builtin never runs, and the node stays root:root 0600 with no visible error.
+#
+# Install:
+#   sudo cp 60-voltaic.rules /etc/udev/rules.d/
+#   sudo udevadm control --reload-rules
+# Then replug the receiver, or re-bind it, so the rule is applied to the
+# already-enumerated device.
+
+ACTION!="add|change", GOTO="voltaic_end"
+
+# Receivers and devices attached over USB (Unifying, Bolt, Nano, cabled).
+SUBSYSTEM=="hidraw", ATTRS{idVendor}=="046d", TAG+="uaccess"
+
+# Devices paired straight to the host over Bluetooth: bus 0005, vendor 046d.
+SUBSYSTEM=="hidraw", KERNELS=="0005:046D:*", TAG+="uaccess"
+
+LABEL="voltaic_end"

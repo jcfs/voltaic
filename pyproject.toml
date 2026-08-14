@@ -1,0 +1,33 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "voltaic"
+version = "1.0.0"
+description = "Logitech device battery levels in the Linux system tray"
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "MIT" }
+authors = [{ name = "João Salavisa" }]
+keywords = ["logitech", "battery", "tray", "hidpp", "linux", "mx-master"]
+classifiers = [
+    "Environment :: X11 Applications :: GTK",
+    "Intended Audience :: End Users/Desktop",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python :: 3",
+    "Topic :: Utilities",
+]
+
+# No Python dependencies on purpose: the HID++ protocol is spoken directly
+# over /dev/hidraw with the standard library. PyGObject, GTK 3 and pycairo
+# are needed at runtime but come from the distribution, not from PyPI, so
+# they are deliberately not listed here.
+dependencies = []
+
+[project.scripts]
+voltaic = "voltaic.__main__:main"
+
+[tool.setuptools]
+packages = ["voltaic"]

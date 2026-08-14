@@ -1,0 +1,12 @@
+[Desktop Entry]
+Type=Application
+Name=Voltaic
+GenericName=Device Battery Monitor
+Comment=Logitech keyboard and mouse battery levels in the system tray
+Exec=voltaic
+Icon=battery
+Terminal=false
+Categories=Utility;System;Monitor;
+Keywords=battery;logitech;mouse;keyboard;mx;tray;
+StartupNotify=false
+X-GNOME-Autostart-enabled=true
