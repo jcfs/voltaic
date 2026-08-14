@@ -124,8 +124,16 @@ jobs:
       - name: Build the package
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y -qq fakeroot
+          sudo apt-get install -y -qq fakeroot lintian appstream
           make deb
+
+      # Policy compliance, which is the bar any apt archive holds a package
+      # to. Failing on warnings keeps it at that bar rather than drifting.
+      - name: Lintian
+        run: lintian --fail-on error,warning --tag-display-limit 0 build/*.deb
+
+      - name: Validate AppStream metadata
+        run: appstreamcli validate packaging/org.jcfs.voltaic.metainfo.xml
 
       # Proves the declared dependencies are satisfiable and the maintainer
       # scripts run — a package that cannot install is worse than none.
@@ -135,6 +143,9 @@ jobs:
           voltaic --version
           test -f /usr/lib/udev/rules.d/60-voltaic.rules
           test -f /usr/share/icons/hicolor/scalable/apps/voltaic.svg
+          test -f /usr/share/man/man1/voltaic.1.gz
+          test -f /usr/share/metainfo/org.jcfs.voltaic.metainfo.xml
+          man -w voltaic
           # No receiver on a runner, so this exits 1 having found nothing.
           voltaic --list && rc=$? || rc=$?
           test "$rc" -eq 1

@@ -1,0 +1,99 @@
+.TH VOLTAIC 1 "August 2026" "voltaic" "User Commands"
+.SH NAME
+voltaic \- wireless device battery levels in the system tray
+.SH SYNOPSIS
+.B voltaic
+.RI [ OPTIONS ]
+.SH DESCRIPTION
+.B Voltaic
+shows the charge of Logitech keyboards and mice, and of AirPods down to each
+earbud and the case, in a translucent panel anchored to a tray icon. Hover
+the icon to open the panel; click to keep it open.
+.PP
+It speaks Logitech's HID++ over
+.I /dev/hidraw
+and Apple's accessory protocol over an L2CAP socket directly, using only the
+Python standard library. Neither Solaar nor root is required.
+.PP
+Only one HID++ client may poll a node at a time \(em two readers steal each
+other's replies \(em so Voltaic takes a lock allowing a single instance, and
+running it alongside Solaar may cause either to miss notifications.
+.SH OPTIONS
+.TP
+.B \-\-list
+Print battery levels to standard output and exit. Does not require GTK.
+.TP
+.BI \-\-interval " SECONDS"
+Seconds between background scans (default: 900). Opening the panel always
+refreshes it, so a long interval only makes the tray icon and the
+low-battery warning less current. See
+.B POLLING
+below.
+.TP
+.B \-\-no\-notify
+Do not post low-battery notifications.
+.TP
+.BI \-\-tray " BACKEND"
+Force a status-icon backend: one of
+.BR auto ", " xembed ", " xapp ", or " appindicator .
+Only
+.B xembed
+reports both a hover signal and the icon's screen rectangle, which is what
+makes hover-to-open possible; the others fall back to a tooltip or a menu
+entry. Default:
+.BR auto .
+.TP
+.B \-\-version
+Show the version and exit.
+.TP
+.B \-h ", " \-\-help
+Show a usage summary and exit.
+.SH POLLING
+A scan is 25 HID++ requests and 175 bytes, so the radio traffic is
+irrelevant. What costs something is that pinging a sleeping device wakes it:
+at the default interval that is roughly 96 wakes a day per device, a few
+minutes of extra awake-but-idle time against devices rated in months.
+.PP
+AirPods are free while they are in the case: discovery is a D-Bus query with
+no radio traffic, and the L2CAP channel is only opened for an accessory that
+is already connected.
+.SH FILES
+.TP
+.I /usr/lib/udev/rules.d/60\-voltaic.rules
+Tags Logitech hidraw nodes with
+.BR uaccess ,
+so the logged-in user can open them. The
+.B 60\-
+prefix matters: systemd applies the ACL from
+.IR 73\-seat\-late.rules ,
+so a rules file sorting after it sets the tag too late and the node stays
+.BR "root:root 0600" .
+.TP
+.I ~/.cache/voltaic/devices.json
+Remembered names and levels, so a device that is switched off stays in the
+panel with its last known charge instead of vanishing.
+.TP
+.I ~/.config/autostart/voltaic.desktop
+Written and removed by the
+.B Start at login
+entry in the tray icon's menu.
+.SH EXIT STATUS
+.TP
+.B 0
+Success.
+.TP
+.B 1
+No devices found, permission denied on the hidraw node, GTK is missing, or
+another instance is already running.
+.SH SEE ALSO
+.BR solaar (1),
+.BR udev (7),
+.BR getfacl (1)
+.PP
+Full documentation and troubleshooting:
+.UR https://github.com/jcfs/voltaic
+.UE
+.SH BUGS
+Report at
+.UR https://github.com/jcfs/voltaic/issues
+.UE

@@ -121,7 +121,22 @@ deb:
 	    $(DEB_ROOT)/usr/share/applications/voltaic.desktop
 	install -Dm0644 packaging/voltaic.svg \
 	    $(DEB_ROOT)/usr/share/icons/hicolor/scalable/apps/voltaic.svg
-	install -Dm0644 LICENSE $(DEB_ROOT)/usr/share/doc/voltaic/copyright
+	install -Dm0644 packaging/org.jcfs.voltaic.metainfo.xml \
+	    $(DEB_ROOT)/usr/share/metainfo/org.jcfs.voltaic.metainfo.xml
+	install -Dm0644 packaging/debian/copyright \
+	    $(DEB_ROOT)/usr/share/doc/voltaic/copyright
+
+	# Both are required by policy: a native package needs changelog.gz, and
+	# every binary in /usr/bin needs a manual page. -n keeps gzip from
+	# stamping a timestamp, so the build is reproducible.
+	install -d $(DEB_ROOT)/usr/share/doc/voltaic
+	gzip -9nc packaging/debian/changelog \
+	    > $(DEB_ROOT)/usr/share/doc/voltaic/changelog.gz
+	chmod 0644 $(DEB_ROOT)/usr/share/doc/voltaic/changelog.gz
+	install -d $(DEB_ROOT)/usr/share/man/man1
+	gzip -9nc packaging/voltaic.1 \
+	    > $(DEB_ROOT)/usr/share/man/man1/voltaic.1.gz
+	chmod 0644 $(DEB_ROOT)/usr/share/man/man1/voltaic.1.gz
 
 	fakeroot dpkg-deb --build $(DEB_ROOT) build/voltaic_$(VERSION)_all.deb
 	@echo

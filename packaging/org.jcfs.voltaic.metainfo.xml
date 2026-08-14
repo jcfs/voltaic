@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  AppStream metadata. This is what puts Voltaic in GNOME Software, KDE
+  Discover and the Mint software manager with a description and screenshots,
+  rather than as a bare package name — the difference between being found
+  and only being installable by someone who already knows it exists.
+-->
+<component type="desktop-application">
+  <id>org.jcfs.voltaic</id>
+  <launchable type="desktop-id">voltaic.desktop</launchable>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>MIT</project_license>
+
+  <name>Voltaic</name>
+  <summary>Wireless device battery levels in the system tray</summary>
+
+  <developer id="io.github.jcfs">
+    <name>jcfs</name>
+  </developer>
+
+  <description>
+    <p>
+      Voltaic shows the charge of Logitech keyboards and mice, and of AirPods
+      down to each earbud and the case, in a translucent panel anchored to a
+      tray icon. Hover the icon for a gauge per device; click to keep it open.
+    </p>
+    <p>
+      It speaks Logitech's HID++ over /dev/hidraw and Apple's accessory
+      protocol over an L2CAP socket directly, using only the Python standard
+      library. Solaar is not required, and neither is root.
+    </p>
+    <ul>
+      <li>Per-earbud AirPods battery — left, right and case separately,
+          rather than the single blended figure BlueZ offers</li>
+      <li>Works with Unifying, Bolt and Nano receivers, and with Logitech
+          devices paired directly over Bluetooth</li>
+      <li>Remembers devices that go offline, with their last known charge</li>
+      <li>Live updates between scans, from unsolicited HID++ notifications</li>
+    </ul>
+  </description>
+
+  <categories>
+    <category>System</category>
+    <category>Monitor</category>
+  </categories>
+
+  <keywords>
+    <keyword>battery</keyword>
+    <keyword>logitech</keyword>
+    <keyword>airpods</keyword>
+    <keyword>mouse</keyword>
+    <keyword>keyboard</keyword>
+    <keyword>tray</keyword>
+  </keywords>
+
+  <url type="homepage">https://github.com/jcfs/voltaic</url>
+  <url type="bugtracker">https://github.com/jcfs/voltaic/issues</url>
+  <url type="vcs-browser">https://github.com/jcfs/voltaic</url>
+
+  <screenshots>
+    <screenshot type="default">
+      <caption>The panel, with a gauge per device</caption>
+      <image>https://raw.githubusercontent.com/jcfs/voltaic/main/packaging/screenshot.png</image>
+    </screenshot>
+    <screenshot>
+      <caption>Bluetooth accessories that are away keep their last levels</caption>
+      <image>https://raw.githubusercontent.com/jcfs/voltaic/main/packaging/screenshot-connect.png</image>
+    </screenshot>
+  </screenshots>
+
+  <!--
+    Declares the hardware the udev rules cover, which is what lets a software
+    centre offer Voltaic when one of these is plugged in. 046d is Logitech.
+  -->
+  <provides>
+    <modalias>usb:v046Dp*</modalias>
+  </provides>
+
+  <content_rating type="oars-1.1"/>
+
+  <releases>
+    <release version="1.2.0" date="2026-08-14">
+      <description>
+        <p>One-command install on every major distribution.</p>
+      </description>
+    </release>
+    <release version="1.1.0" date="2026-08-14">
+      <description>
+        <p>Application icon, tests, CI, and an install that works on
+           distributions enforcing PEP 668.</p>
+      </description>
+    </release>
+    <release version="1.0.0" date="2026-07-28">
+      <description>
+        <p>Initial release.</p>
+      </description>
+    </release>
+  </releases>
+</component>

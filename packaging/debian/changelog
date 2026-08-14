@@ -1,0 +1,25 @@
+voltaic (1.2.0) unstable; urgency=medium
+
+  * Debian package, PKGBUILD and install.sh: installing is now one command
+    on every major distribution.
+  * The package ships the udev rules and replays them against an
+    already-connected receiver, so no manual setup or replugging is needed.
+  * Manual page and AppStream metadata.
+
+ -- jcfs <jcfs@users.noreply.github.com>  Fri, 14 Aug 2026 17:00:00 +0000
+
+voltaic (1.1.0) unstable; urgency=medium
+
+  * Application icon, installed into the hicolor theme.
+  * Report missing GTK dependencies in a dialog rather than dying with a
+    traceback that a desktop launcher discards.
+  * Distinguish a missing Bluetooth stack from having no accessories paired.
+  * Headless unit tests and continuous integration.
+
+ -- jcfs <jcfs@users.noreply.github.com>  Fri, 14 Aug 2026 16:15:00 +0000
+
+voltaic (1.0.0) unstable; urgency=medium
+
+  * Initial release.
+
+ -- jcfs <jcfs@users.noreply.github.com>  Tue, 28 Jul 2026 00:00:00 +0000
