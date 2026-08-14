@@ -36,6 +36,25 @@ packages = ["voltaic"]
 [tool.setuptools.dynamic]
 version = { attr = "voltaic.__version__" }
 
+[tool.coverage.run]
+source = ["voltaic"]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "if __name__ == .__main__.:",
+    "raise NotImplementedError",
+]
+# The GTK layer needs a real display and a real tray, so it is covered by
+# `make verify` against a live desktop rather than by unit tests. Keeping it
+# out of the gate means the threshold measures something that can actually
+# move; `make coverage` still prints the unfiltered numbers first.
+omit = [
+    "voltaic/app.py",
+    "voltaic/popup.py",
+    "voltaic/tray.py",
+]
+
 [tool.ruff]
 line-length = 88
 target-version = "py39"

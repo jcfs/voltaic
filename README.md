@@ -309,10 +309,18 @@ each may occasionally miss a notification the other consumed.
 ## Development
 
 ```sh
-make run      # run from the checkout without installing
-make test     # headless unit tests — no display, receiver or GTK needed
-make verify   # tray hover/click behaviour; needs a real desktop
+make run       # run from the checkout without installing
+make test      # headless unit tests — no display, receiver or GTK needed
+make coverage  # the same, under coverage, with a floor
+make verify    # tray hover/click behaviour; needs a real desktop
 ```
+
+93 tests, covering the HID++ transport against a fake hidraw node, the AAP
+frame decoder, the voltage curve, the device model, the offline cache, the
+colour palette and the rendered tray icon. Coverage of those modules is
+**53%**; the GTK layer (`app.py`, `popup.py`, `tray.py`) is at 0% and is
+exercised by `make verify` against a live desktop instead, since a tray icon
+and a hover panel cannot be meaningfully unit-tested.
 
 The protocol and model layers are standard library only, which is what lets
 `make test` run in CI on a machine with no GTK and no hardware. Keep it that

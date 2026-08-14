@@ -33,9 +33,18 @@ install section for the package names.
 ## Tests
 
 ```sh
-make test     # headless: no display, no receiver, no GTK required
-make verify   # tray hover and click behaviour; needs a real desktop
+make test      # headless: no display, no receiver, no GTK required
+make coverage  # the same tests under coverage, with a floor
+make verify    # tray hover and click behaviour; needs a real desktop
 ```
+
+`tests/test_transport.py` fakes a hidraw node with a `SOCK_SEQPACKET`
+socketpair rather than a FIFO. That matters: hidraw returns one report per
+read, and on a byte-stream fake two queued frames arrive in a single
+`os.read`, which silently breaks every test about skipping the wrong frame.
+
+`tests/test_render.py` needs pycairo but no display, and skips rather than
+fails when pycairo is absent — that is what lets the no-GTK job stay green.
 
 `make test` is what CI runs, deliberately on a machine with **no GTK
 installed**. That is a design constraint, not an accident:

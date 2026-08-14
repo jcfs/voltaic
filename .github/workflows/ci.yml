@@ -41,6 +41,30 @@ jobs:
           python -m voltaic --list && rc=$? || rc=$?
           test "$rc" -eq 1
 
+  coverage:
+    name: Coverage
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      # Deliberately no setup-python: pycairo comes from apt and lands in
+      # the *system* interpreter's dist-packages, so a setup-python runtime
+      # would not see it and the cairo tests would quietly skip instead of
+      # running. The venv exists only to get coverage alongside them, and
+      # --system-site-packages is what keeps cairo visible inside it.
+      - name: Install pycairo and GTK
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq python3-gi python3-cairo gir1.2-gtk-3.0
+          python3 -m venv --system-site-packages .ci-venv
+          .ci-venv/bin/pip install --quiet coverage
+
+      - name: Confirm cairo is importable, so the tests do not skip
+        run: .ci-venv/bin/python -c "import cairo; print('pycairo', cairo.version)"
+
+      - name: Run tests under coverage
+        run: PATH="$PWD/.ci-venv/bin:$PATH" make coverage
+
   lint:
     name: Lint
     runs-on: ubuntu-latest

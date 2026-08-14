@@ -14,7 +14,7 @@ VERSION = $(shell python3 -c "import re,pathlib; \
     pathlib.Path('voltaic/__init__.py').read_text(), re.M).group(1))")
 DEB_ROOT = build/deb/voltaic_$(VERSION)_all
 
-.PHONY: help install install-udev uninstall run list check verify test deb
+.PHONY: help install install-udev uninstall run list check verify test deb coverage
 
 help:
 	@echo "Voltaic — Logitech battery levels in the system tray"
@@ -25,6 +25,7 @@ help:
 	@echo "  make list           print battery levels and exit"
 	@echo "  make check          verify runtime dependencies are present"
 	@echo "  make test           run the headless unit tests"
+	@echo "  make coverage       run them under coverage and check the floor"
 	@echo "  make verify         check the tray hover/click behaviour"
 	@echo "  make deb            build a .deb that pulls in its own dependencies"
 	@echo "  make uninstall      remove the user installation"
@@ -131,6 +132,19 @@ deb:
 # what lets these run in CI.
 test:
 	@python3 -m unittest discover -s tests -p 'test_*.py'
+
+# Two numbers on purpose. The first is the whole package, GTK layer included,
+# so the untested surface stays visible. The second omits the GTK layer (see
+# pyproject) and is the one that gates, because it is the part unit tests can
+# actually reach.
+coverage:
+	@python3 -m coverage run -m unittest discover -s tests -p 'test_*.py'
+	@echo
+	@echo "--- whole package, including the GTK layer ---"
+	@python3 -m coverage report --omit='no-such-path'
+	@echo
+	@echo "--- unit-testable modules (this is what gates) ---"
+	@python3 -m coverage report -m --fail-under=50
 
 # Needs a real tray, so quit any running instance first: two copies would
 # fight over the hidraw node.
