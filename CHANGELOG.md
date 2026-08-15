@@ -10,6 +10,34 @@ part.
 
 ---
 
+## [Unreleased]
+
+### Fixed
+
+- **The `upower` source never returned anything.** The call fetching a
+  device's properties named `Gio.GLib.Variant`, which does not exist, so
+  every device raised `AttributeError` — and a blanket `except Exception:
+  continue` swallowed it. Enabling the source did nothing at all, silently,
+  for the whole of 1.4.0 and 1.5.0.
+
+  This is the failure the broad `except` was there to prevent and instead
+  caused. The D-Bus calls now catch `GLib.Error` only, so a coding mistake
+  surfaces while a stopped service still degrades quietly.
+
+### Added
+
+- Source tests against mocked UPower and BlueZ services, via
+  python-dbusmock. `upower` and `bluez` read hardware this machine does not
+  have and were shipped on the strength of "it does not crash", which is
+  exactly how the above survived two releases. The mocks speak the real
+  interfaces, so the sources are exercised rather than merely imported —
+  including that line power, the host's own battery, absent devices and
+  disconnected Bluetooth devices are all correctly ignored.
+- CI installs python-dbusmock and asserts it is importable, so these tests
+  run rather than skipping.
+
+---
+
 ## [1.5.0] — 2026-08-15
 
 **A settings window.** Configuration arrived in 1.4.0 as a JSON file, which

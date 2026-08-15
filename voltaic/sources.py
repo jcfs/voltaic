@@ -82,17 +82,17 @@ _UPOWER_STATES = {
 
 
 def _system_bus():
-    """The system bus, or None where D-Bus is unavailable."""
+    """(bus, Gio, GLib), or (None, None, None) where D-Bus is unavailable."""
     try:
         import gi
         gi.require_version("Gio", "2.0")
-        from gi.repository import Gio
+        from gi.repository import Gio, GLib
     except (ImportError, ValueError):
-        return None, None
+        return None, None, None
     try:
-        return Gio.bus_get_sync(Gio.BusType.SYSTEM, None), Gio
-    except Exception:
-        return None, None
+        return Gio.bus_get_sync(Gio.BusType.SYSTEM, None), Gio, GLib
+    except GLib.Error:
+        return None, None, None
 
 
 class UPowerSource(Source):
@@ -109,7 +109,7 @@ class UPowerSource(Source):
     name = "upower"
 
     def scan(self) -> list[Device]:
-        bus, Gio = _system_bus()
+        bus, Gio, GLib = _system_bus()
         if bus is None:
             return []
         try:
@@ -117,7 +117,8 @@ class UPowerSource(Source):
                 "org.freedesktop.UPower", "/org/freedesktop/UPower",
                 "org.freedesktop.UPower", "EnumerateDevices", None, None,
                 Gio.DBusCallFlags.NONE, 3000, None)
-        except Exception:
+        except GLib.Error:
+            # UPower is not running, which is not an error worth reporting.
             return []
 
         devices = []
@@ -126,9 +127,13 @@ class UPowerSource(Source):
                 props = bus.call_sync(
                     "org.freedesktop.UPower", path,
                     "org.freedesktop.DBus.Properties", "GetAll",
-                    Gio.GLib.Variant("(s)", ("org.freedesktop.UPower.Device",)),
+                    GLib.Variant("(s)", ("org.freedesktop.UPower.Device",)),
                     None, Gio.DBusCallFlags.NONE, 3000, None).unpack()[0]
-            except Exception:
+            # Only D-Bus failures are skipped. Catching everything here hid
+            # an AttributeError for a whole release: the call named a symbol
+            # that does not exist, every device raised, and the source
+            # silently reported no devices at all.
+            except GLib.Error:
                 continue
 
             kind = _UPOWER_KINDS.get(props.get("Type"))
@@ -168,7 +173,7 @@ class BluezSource(Source):
     name = "bluez"
 
     def scan(self) -> list[Device]:
-        bus, Gio = _system_bus()
+        bus, Gio, GLib = _system_bus()
         if bus is None:
             return []
         try:
@@ -176,7 +181,8 @@ class BluezSource(Source):
                 "org.bluez", "/", "org.freedesktop.DBus.ObjectManager",
                 "GetManagedObjects", None, None,
                 Gio.DBusCallFlags.NONE, 3000, None)
-        except Exception:
+        except GLib.Error:
+            # BlueZ absent or not answering; nothing to report.
             return []
 
         devices = []
