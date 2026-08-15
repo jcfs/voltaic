@@ -172,12 +172,28 @@ jobs:
       - uses: actions/checkout@v5
 
       # makepkg refuses to run as root, so build as an unprivileged user.
+      # A full build (not --nobuild) verifies the source checksum against the
+      # real release tarball, so a PKGBUILD whose pkgver and sha256sums have
+      # drifted apart fails here rather than for a user.
       - name: Build the package
         run: |
           useradd -m builder
           cp packaging/PKGBUILD /home/builder/
           chown -R builder:builder /home/builder
-          su builder -c 'cd ~ && makepkg --nobuild --nodeps --noconfirm'
+          su builder -c 'cd ~ && makepkg --nodeps --noconfirm'
+          su builder -c 'cd ~ && bsdtar -tf voltaic-*.pkg.tar.* | grep -q usr/bin/voltaic'
+
+      # The AUR rejects a push whose .SRCINFO disagrees with its PKGBUILD,
+      # and .SRCINFO is generated rather than written, so it silently rots.
+      - name: Check .SRCINFO is in step with the PKGBUILD
+        run: |
+          su builder -c 'cd ~ && makepkg --printsrcinfo' > /tmp/SRCINFO.generated
+          if ! diff -u packaging/.SRCINFO /tmp/SRCINFO.generated; then
+            echo "::error::packaging/.SRCINFO is stale."\
+                 "Regenerate it with: makepkg --printsrcinfo > packaging/.SRCINFO"
+            exit 1
+          fi
+          echo ".SRCINFO matches the PKGBUILD"
 
       - name: Check the metadata parses and matches the release
         run: |
