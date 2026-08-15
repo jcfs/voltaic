@@ -86,6 +86,56 @@ jobs:
       - name: Run tests under coverage
         run: xvfb-run -a env PATH="$PWD/.ci-venv/bin:$PATH" make coverage
 
+  wayland:
+    name: Wayland session
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      # A real compositor, not a stub. The bug this guards against was
+      # invisible to stubbing: Gtk.StatusIcon constructs happily under
+      # Wayland, is never embedded, and shows nothing — so Voltaic ran with
+      # no icon and no error on the default session of current Ubuntu and
+      # Fedora.
+      - name: Install Weston and GTK
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq weston python3-gi python3-cairo \
+                                      gir1.2-gtk-3.0 gir1.2-xapp-1.0
+
+      - name: Run the tray tests under Weston
+        run: |
+          export XDG_RUNTIME_DIR=/tmp/wayland-ci
+          mkdir -p "$XDG_RUNTIME_DIR" && chmod 700 "$XDG_RUNTIME_DIR"
+          weston --backend=headless --socket=wl-ci --idle-time=0 \
+            > /tmp/weston.log 2>&1 &
+          for i in $(seq 1 20); do
+            [ -S "$XDG_RUNTIME_DIR/wl-ci" ] && break
+            sleep 1
+          done
+          test -S "$XDG_RUNTIME_DIR/wl-ci" || { cat /tmp/weston.log; exit 1; }
+
+          export WAYLAND_DISPLAY=wl-ci
+          unset DISPLAY
+          # Fail rather than skip: a silent skip here would restore exactly
+          # the blind spot these tests exist to remove.
+          python3 -c "
+          import gi
+          gi.require_version('Gdk', '3.0')
+          from gi.repository import Gdk, Gtk
+          assert Gtk.init_check([])[0], 'no display'
+          name = type(Gdk.Display.get_default()).__name__
+          assert name.startswith('GdkWayland'), f'not Wayland: {name}'
+          print('session is', name)
+          "
+          python3 -m unittest tests.test_wayland -v
+
+      - name: The whole suite must also pass on Wayland
+        run: |
+          export XDG_RUNTIME_DIR=/tmp/wayland-ci WAYLAND_DISPLAY=wl-ci
+          unset DISPLAY
+          python3 -m unittest discover -s tests -p 'test_*.py'
+
   lint:
     name: Lint
     runs-on: ubuntu-latest
