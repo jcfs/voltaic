@@ -29,8 +29,18 @@ for arg in "$@"; do
     esac
 done
 
-say() { printf '\033[1m%s\033[0m\n' "$*"; }
-die() { printf 'error: %s\n' "$*" >&2; exit 1; }
+say()  { printf '\033[1m%s\033[0m\n' "$*"; }
+warn() { printf 'warning: %s\n' "$*" >&2; }
+die()  { printf 'error: %s\n' "$*" >&2; exit 1; }
+
+# Already root (a container, a minimal system, someone running this under
+# sudo) means there is nothing to escalate and sudo may not even be present.
+SUDO=""
+if [ "$(id -u)" -ne 0 ]; then
+    command -v sudo > /dev/null 2>&1 \
+        || die "sudo is required, or run this as root"
+    SUDO="sudo"
+fi
 
 # -- work out which distribution this is -------------------------------------
 
@@ -45,20 +55,20 @@ PKG_INSTALL=""
 PACKAGES=""
 case "${ID:-} ${ID_LIKE:-}" in
     *debian*|*ubuntu*|*mint*)
-        PKG_INSTALL="sudo apt-get install -y"
+        PKG_INSTALL="$SUDO apt-get install -y"
         PACKAGES="python3-gi python3-gi-cairo python3-cairo gir1.2-gtk-3.0 gir1.2-xapp-1.0"
         ;;
     *fedora*|*rhel*|*centos*)
-        PKG_INSTALL="sudo dnf install -y"
+        PKG_INSTALL="$SUDO dnf install -y"
         PACKAGES="python3-gobject python3-cairo gtk3 xapps"
         ;;
     *arch*|*manjaro*)
-        PKG_INSTALL="sudo pacman -S --needed --noconfirm"
+        PKG_INSTALL="$SUDO pacman -S --needed --noconfirm"
         PACKAGES="python-gobject python-cairo gtk3 xapp"
         ;;
     *suse*)
-        PKG_INSTALL="sudo zypper install -y"
-        PACKAGES="python3-gobject python3-gobject-Gdk python3-cairo gtk3"
+        PKG_INSTALL="$SUDO zypper install -y"
+        PACKAGES="python3-gobject python3-gobject-Gdk python3-cairo typelib-1_0-Gtk-3_0 typelib-1_0-XApp-1_0"
         ;;
     *)
         die "unrecognised distribution '${ID:-unknown}'. Install PyGObject, GTK 3 and pycairo, then run 'make install' from a checkout."
@@ -78,7 +88,9 @@ echo "  2. install udev rules to /etc/udev/rules.d/60-voltaic.rules"
 echo "       (this is what lets you read the receiver without root)"
 echo "  3. install Voltaic into ~/.local"
 echo
-echo "Steps 1 and 2 need sudo. Nothing else is done as root."
+if [ -n "$SUDO" ]; then
+    echo "Steps 1 and 2 need sudo. Nothing else is done as root."
+fi
 echo
 
 if [ "$ASSUME_YES" -eq 0 ]; then
@@ -109,16 +121,46 @@ git clone --depth 1 --quiet "$REPO" "$WORKDIR/voltaic"
 cd "$WORKDIR/voltaic"
 
 say "==> Installing udev rules"
-sudo install -m 0644 packaging/60-voltaic.rules /etc/udev/rules.d/60-voltaic.rules
-sudo rm -f /etc/udev/rules.d/99-voltaic.rules
-sudo udevadm control --reload-rules
-# Replay the rules against hidraw nodes that already exist, so the ACL
-# applies to a receiver that is plugged in right now. Without this the
-# receiver would have to be unplugged and plugged back in.
-sudo udevadm trigger --subsystem-match=hidraw --action=change || true
+$SUDO install -d /etc/udev/rules.d
+$SUDO install -m 0644 packaging/60-voltaic.rules /etc/udev/rules.d/60-voltaic.rules
+$SUDO rm -f /etc/udev/rules.d/99-voltaic.rules
+# A machine without a running udev (a container, a chroot) can still be a
+# valid install target, so this is a warning rather than the end of it.
+if command -v udevadm > /dev/null 2>&1; then
+    $SUDO udevadm control --reload-rules \
+        || warn "could not reload udev rules"
+    # Replay the rules against hidraw nodes that already exist, so the ACL
+    # applies to a receiver that is plugged in right now. Without this the
+    # receiver would have to be unplugged and plugged back in.
+    $SUDO udevadm trigger --subsystem-match=hidraw --action=change || true
+else
+    warn "udevadm not found — replug the receiver for the rules to apply"
+fi
 
 say "==> Installing Voltaic"
 make install
+
+# Installing the packages is not the same as them working. openSUSE shipped
+# a "gtk3" that carries no Python typelib, which made this script report
+# success while the tray could not start at all — so check what was
+# installed rather than trusting the package manager's exit code.
+say "==> Checking the install"
+VENV_PYTHON="$HOME/.local/share/voltaic/venv/bin/python"
+if "$VENV_PYTHON" - <<'CHECK' 2>/dev/null
+import gi
+gi.require_version("Gtk", "3.0")
+from gi.repository import Gtk  # noqa: F401
+import cairo  # noqa: F401
+CHECK
+then
+    echo "GTK 3 and pycairo are usable."
+else
+    warn "Voltaic is installed but GTK 3 is not usable, so the tray icon"
+    warn "will not start. The package names this script used for"
+    warn "'${ID:-unknown}' are probably wrong — please report it at"
+    warn "$REPO/issues so the next person does not hit this."
+    exit 1
+fi
 
 echo
 say "Done."

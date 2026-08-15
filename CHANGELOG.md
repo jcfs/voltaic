@@ -4,6 +4,28 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+
+- **openSUSE installs were broken.** `install.sh` and the README asked for
+  `gtk3`, which on openSUSE carries no Python typelib, so the install
+  reported success while the tray could not start at all. The correct
+  packages are `typelib-1_0-Gtk-3_0` and `typelib-1_0-XApp-1_0`.
+- `install.sh` now verifies that GTK 3 and pycairo are actually importable
+  after installing them, and fails loudly rather than claiming success —
+  this is what the openSUSE bug slipped past.
+- `install.sh` works when run as root, where `sudo` may not exist, and
+  survives a machine with no running udev instead of aborting.
+- `make uninstall` now says how to remove the udev rules, which it cannot
+  remove itself without root.
+
+### Added
+
+- CI runs `install.sh` end to end on Fedora, Arch, openSUSE, Debian and
+  Ubuntu containers, and builds the PKGBUILD on Arch. Both were advertised
+  in the README while never having been executed anywhere.
+
 ## [1.2.1] - 2026-08-15
 
 ### Added

@@ -87,6 +87,10 @@ uninstall:
 	rm -rf $(HOME)/.cache/voltaic
 	-update-desktop-database $(DESKTOP_DIR) 2>/dev/null
 	-gtk-update-icon-cache -f -t $(PREFIX)/share/icons/hicolor 2>/dev/null
+	@echo
+	@echo "Removed. The udev rules are left in place, since removing them"
+	@echo "needs root and they are harmless on their own. To remove them:"
+	@echo "  sudo rm $(UDEV_DIR)/60-voltaic.rules && sudo udevadm control --reload-rules"
 
 run:
 	python3 -m voltaic

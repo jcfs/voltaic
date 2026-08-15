@@ -112,6 +112,82 @@ jobs:
             udevadm verify packaging/60-voltaic.rules
           fi
 
+  install-script:
+    name: install.sh on ${{ matrix.distro }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - distro: fedora
+            image: fedora:41
+            bootstrap: dnf install -y -q git make python3
+          - distro: arch
+            image: archlinux:latest
+            bootstrap: pacman -Sy --noconfirm --needed git make python
+          - distro: opensuse
+            image: opensuse/tumbleweed
+            bootstrap: zypper --non-interactive --quiet install git make python3
+          - distro: debian
+            image: debian:12
+            bootstrap: apt-get update -qq && apt-get install -y -qq git make python3
+          - distro: ubuntu
+            image: ubuntu:24.04
+            bootstrap: apt-get update -qq && apt-get install -y -qq git make python3
+    container:
+      image: ${{ matrix.image }}
+    steps:
+      - name: Bootstrap the image
+        run: ${{ matrix.bootstrap }}
+
+      - uses: actions/checkout@v5
+
+      # The script names a different set of packages per distribution, and
+      # those names drift. openSUSE's "gtk3" shipped no Python typelib, which
+      # let the script report success while the tray could not start — the
+      # sort of thing only a real run on a real image catches.
+      - name: Run the installer
+        run: ./install.sh -y
+
+      - name: Check the result actually works
+        run: |
+          ~/.local/bin/voltaic --version
+          ~/.local/share/voltaic/venv/bin/python -c "
+          import gi
+          gi.require_version('Gtk', '3.0')
+          from gi.repository import Gtk
+          import cairo
+          print('GTK 3 and pycairo usable')
+          "
+
+  pkgbuild:
+    name: PKGBUILD on Arch
+    runs-on: ubuntu-latest
+    container:
+      image: archlinux:latest
+    steps:
+      - name: Install build tools
+        run: pacman -Sy --noconfirm --needed base-devel git
+
+      - uses: actions/checkout@v5
+
+      # makepkg refuses to run as root, so build as an unprivileged user.
+      - name: Build the package
+        run: |
+          useradd -m builder
+          cp packaging/PKGBUILD /home/builder/
+          chown -R builder:builder /home/builder
+          su builder -c 'cd ~ && makepkg --nobuild --nodeps --noconfirm'
+
+      - name: Check the metadata parses and matches the release
+        run: |
+          su builder -c 'cd ~ && source PKGBUILD && echo "$pkgname $pkgver"'
+          grep -q "pkgver=$(python3 -c "
+          import re,pathlib
+          print(re.search(r'__version__ = \"([^\"]+)\"',
+                pathlib.Path('voltaic/__init__.py').read_text()).group(1))
+          ")" packaging/PKGBUILD
+
   deb:
     name: Build .deb
     runs-on: ubuntu-latest

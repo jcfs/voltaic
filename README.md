@@ -97,7 +97,7 @@ not come from PyPI, and Voltaic needs no other Python packages at all:
 | Debian / Ubuntu / Mint | `sudo apt install python3-gi python3-cairo gir1.2-xapp-1.0` |
 | Fedora | `sudo dnf install python3-gobject python3-cairo xapps` |
 | Arch / Manjaro | `sudo pacman -S python-gobject python-cairo xapp` |
-| openSUSE | `sudo zypper install python3-gobject python3-cairo` |
+| openSUSE | `sudo zypper install python3-gobject python3-gobject-Gdk python3-cairo typelib-1_0-Gtk-3_0 typelib-1_0-XApp-1_0` |
 
 The XApp package is optional; it is only used as a status-icon backend on
 Cinnamon, MATE and Xfce.
