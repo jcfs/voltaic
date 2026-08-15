@@ -56,7 +56,7 @@ PACKAGES=""
 case "${ID:-} ${ID_LIKE:-}" in
     *debian*|*ubuntu*|*mint*)
         PKG_INSTALL="$SUDO apt-get install -y"
-        PACKAGES="python3-gi python3-gi-cairo python3-cairo gir1.2-gtk-3.0 gir1.2-xapp-1.0"
+        PACKAGES="python3-gi python3-gi-cairo python3-cairo python3-venv gir1.2-gtk-3.0 gir1.2-xapp-1.0"
         ;;
     *fedora*|*rhel*|*centos*)
         PKG_INSTALL="$SUDO dnf install -y"

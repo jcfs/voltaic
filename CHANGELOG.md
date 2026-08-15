@@ -8,6 +8,10 @@ All notable changes to this project are documented here. The format follows
 
 ### Fixed
 
+- **Debian and Ubuntu source installs were broken.** `python3 -m venv` needs
+  `python3-venv`, which Debian and Ubuntu split out of the standard library
+  and do not install by default, so `make install` and `install.sh` both
+  died with "ensurepip is not available". `.deb` users were never affected.
 - **openSUSE installs were broken.** `install.sh` and the README asked for
   `gtk3`, which on openSUSE carries no Python typelib, so the install
   reported success while the tray could not start at all. The correct
