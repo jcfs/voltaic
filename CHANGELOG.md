@@ -4,7 +4,12 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.2.2] - 2026-08-15
+
+Installing from source was broken on Debian, Ubuntu and openSUSE. All three
+bugs were found by running the install paths on those distributions for the
+first time — none of them could be seen from a Debian-family development
+machine or from the `.deb`, which is the one route that uses no virtualenv.
 
 ### Fixed
 

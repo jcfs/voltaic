@@ -1,3 +1,17 @@
+voltaic (1.2.2) unstable; urgency=medium
+
+  * Fix source installs on Debian and Ubuntu, which need python3-venv for
+    python3 -m venv to work at all.
+  * Fix source installs on openSUSE, where the GTK typelib lives in
+    typelib-1_0-Gtk-3_0 rather than gtk3.
+  * install.sh now verifies that GTK is importable after installing it,
+    rather than trusting the package manager's exit code, and works when
+    run as root or on a machine with no udev.
+  * Continuous integration now runs install.sh on Debian, Ubuntu, Fedora,
+    Arch and openSUSE, and builds the Arch package.
+
+ -- jcfs <jcfs@users.noreply.github.com>  Sat, 15 Aug 2026 10:30:00 +0000
+
 voltaic (1.2.1) unstable; urgency=medium
 
   * Published to a signed apt repository at https://jcfs.github.io/voltaic,
