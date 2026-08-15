@@ -4,6 +4,25 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+
+- **No tray icon at all on Wayland.** `auto` tried XEmbed first, and
+  `Gtk.StatusIcon` under Wayland constructs without error, is never
+  embedded, and shows nothing — so the process ran with no icon and no
+  complaint. Confirmed against a headless Weston: `is_embedded()` and
+  `get_geometry()` both return False. Voltaic now detects a Wayland display
+  and starts at the `xapp` backend instead. This affected GNOME and KDE on
+  Wayland, which is the default session on current Ubuntu and Fedora.
+- **Silence when no tray exists at all.** A few seconds after start-up
+  Voltaic now says why there is no icon — in a notification and on standard
+  error — naming the extension to install, instead of leaving a running
+  process and an empty panel area. This also covers XEmbed on X11 where no
+  tray accepted the icon.
+- `Gdk` and `GdkPixbuf` were imported without a version guard, which
+  produced a `PyGIWarning` on start-up.
+
 ## [1.2.2] - 2026-08-15
 
 Installing from source was broken on Debian, Ubuntu and openSUSE. All three

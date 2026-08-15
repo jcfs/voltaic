@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import sys
 import threading
 import time
 
@@ -66,6 +67,17 @@ class VoltaicApp:
 
         # Keep the popup's "updated Ns ago" line honest while it is open.
         GLib.timeout_add_seconds(10, self._tick_footer)
+
+        # Give the tray a few seconds to embed the icon, then say something
+        # if it never appeared. Silence here reads as "the app is broken".
+        GLib.timeout_add_seconds(4, self._check_tray_visible)
+
+    def _check_tray_visible(self) -> bool:
+        reason = self.tray.invisible_reason()
+        if reason:
+            print(f"voltaic: {reason}", file=sys.stderr)
+            _notify("Voltaic has no tray icon", reason)
+        return False  # once is enough
 
     # -- monitor callbacks ------------------------------------------------
 

@@ -21,6 +21,8 @@ import warnings
 
 import gi
 
+gi.require_version("Gdk", "3.0")
+gi.require_version("GdkPixbuf", "2.0")
 gi.require_version("Gtk", "3.0")
 from gi.repository import Gdk, GdkPixbuf, Gtk  # noqa: E402
 
@@ -84,14 +86,69 @@ class Tray:
         self._indicator = None
 
         self.menu = self._build_menu()
-        order = (("xembed", "xapp", "appindicator") if preferred == "auto"
-                 else (preferred,))
+        order = (self._auto_order() if preferred == "auto" else (preferred,))
         for name in order:
             if self._try_backend(name):
                 self.backend = name
                 break
 
     # -- backend setup ----------------------------------------------------
+
+    @staticmethod
+    def is_wayland() -> bool:
+        """Is this a Wayland session?
+
+        Checked on the display rather than on XDG_SESSION_TYPE, because an
+        X11 app running under XWayland sees a session type of "wayland"
+        while still having a perfectly good X11 display to embed into.
+        """
+        display = Gdk.Display.get_default()
+        if display is not None:
+            return type(display).__name__.startswith("GdkWayland")
+        return os.environ.get("XDG_SESSION_TYPE", "") == "wayland"
+
+    def _auto_order(self) -> tuple[str, ...]:
+        """Backends to try, best first.
+
+        XEmbed is preferred where it works because it is the only backend
+        that reports hover and icon geometry. Under Wayland there is no
+        XEmbed at all: Gtk.StatusIcon still constructs without error, but
+        it is never embedded and never shows an icon — so trying it first
+        there means the tray silently does not appear.
+        """
+        if self.is_wayland():
+            return ("xapp", "appindicator")
+        return ("xembed", "xapp", "appindicator")
+
+    def invisible_reason(self) -> str | None:
+        """Why the icon is not on screen, or None if it should be.
+
+        A tray icon that never appears is the worst failure this program
+        has: nothing errors, the process sits there, and the user concludes
+        it is broken. Call this a few seconds after start-up, once the tray
+        has had time to embed the icon.
+        """
+        if self.backend == "none":
+            if self.is_wayland():
+                return ("No system tray found. This is a Wayland session, "
+                        "where the legacy tray protocol does not exist. On "
+                        "GNOME, install the AppIndicator extension; on KDE, "
+                        "Cinnamon, MATE and Xfce a tray is built in.")
+            return ("No system tray found. GNOME removes tray icons by "
+                    "default — install the AppIndicator extension, or run "
+                    "a desktop with a built-in tray.")
+
+        # XEmbed is the one backend that can report whether the icon really
+        # made it into a tray, so check rather than assume.
+        if self.backend == "xembed" and self._status is not None:
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore", DeprecationWarning)
+                embedded = self._status.is_embedded()
+            if not embedded:
+                return ("The tray icon was created but no tray accepted it, "
+                        "so it is not visible. Install a tray extension for "
+                        "your desktop, or try --tray appindicator.")
+        return None
 
     def _try_backend(self, name: str) -> bool:
         if name == "xembed":

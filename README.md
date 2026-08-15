@@ -164,7 +164,16 @@ explicitly when the Bluetooth stack itself could not be reached.
 **The tray icon is missing on GNOME.** GNOME dropped tray icons; you need an
 extension such as AppIndicator Support, after which `--tray appindicator`
 works. Hover-to-open is unavailable on that backend — see
-[Requirements](#requirements).
+[Requirements](#requirements). Voltaic says so itself a few seconds after
+start-up, in a notification and on standard error, rather than leaving you
+with a process and no icon.
+
+**I am on Wayland.** Voltaic works, but hover-to-open does not: it depends
+on XEmbed, which does not exist under Wayland at all. You get the `xapp`
+backend on Cinnamon, MATE and Xfce, or `appindicator` elsewhere, and the
+panel opens on click. Voltaic detects the session and skips XEmbed
+automatically — asking for `--tray xembed` there produces an icon that is
+created but never displayed.
 
 ## Usage
 
@@ -236,6 +245,12 @@ The status icon has three backends, chosen automatically in this order:
 other two exist — but nothing in the modern tray protocols replaces the two
 things it reports, so it stays the preferred backend while it works. Override
 with `--tray` if your desktop mishandles XEmbed icons.
+
+**Under Wayland, XEmbed is skipped automatically.** There is no XEmbed on
+Wayland, and `Gtk.StatusIcon` does not say so: it constructs without error,
+reports `is_embedded() == False`, and shows nothing. Voltaic detects a
+Wayland display and starts at `xapp` instead, so the icon appears rather
+than silently not existing.
 
 See [Install](#1-system-packages) for the package names on each distribution.
 
