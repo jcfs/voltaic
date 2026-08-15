@@ -55,15 +55,28 @@ jobs:
       - name: Install pycairo and GTK
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y -qq python3-gi python3-cairo gir1.2-gtk-3.0
+          # xvfb so the settings-window tests actually run here rather than
+          # skipping: building a Gtk.Window needs a display, even though
+          # nothing is ever shown.
+          sudo apt-get install -y -qq python3-gi python3-cairo gir1.2-gtk-3.0 xvfb
           python3 -m venv --system-site-packages .ci-venv
           .ci-venv/bin/pip install --quiet coverage
 
       - name: Confirm cairo is importable, so the tests do not skip
         run: .ci-venv/bin/python -c "import cairo; print('pycairo', cairo.version)"
 
+      - name: Confirm a display is available, so no GUI test skips
+        run: |
+          xvfb-run -a .ci-venv/bin/python -c "
+          import gi
+          gi.require_version('Gtk', '3.0')
+          from gi.repository import Gtk
+          assert Gtk.init_check([])[0], 'no display'
+          print('display OK')
+          "
+
       - name: Run tests under coverage
-        run: PATH="$PWD/.ci-venv/bin:$PATH" make coverage
+        run: xvfb-run -a env PATH="$PWD/.ci-venv/bin:$PATH" make coverage
 
   lint:
     name: Lint
@@ -127,7 +140,10 @@ jobs:
             bootstrap: pacman -Sy --noconfirm --needed git make python
           - distro: opensuse
             image: opensuse/tumbleweed
-            bootstrap: zypper --non-interactive --quiet install git make python3
+            bootstrap: >-
+              zypper --non-interactive --quiet install git make python3 ||
+              (sleep 20 && zypper --non-interactive refresh --force &&
+               zypper --non-interactive --quiet install git make python3)
           - distro: debian
             image: debian:12
             bootstrap: apt-get update -qq && apt-get install -y -qq git make python3

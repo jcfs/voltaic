@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """Tests for the settings window.
 
-The window is built but never shown, so these run headless — what matters
-is that the widgets round-trip to the same config file the command line
-reads, not how it looks.
+The window is built but never shown. It still needs a display to construct,
+so these skip without one (CI runs them under xvfb). What matters is that
+the widgets round-trip to the same config the command line reads.
 
 Skipped where GTK is absent, so the no-GTK CI job stays green.
 
@@ -22,16 +22,32 @@ try:
     import gi
 
     gi.require_version("Gtk", "3.0")
-    from gi.repository import Gtk  # noqa: F401
+    from gi.repository import Gtk
 
     from voltaic import settings as settings_module
 except (ImportError, ValueError):  # pragma: no cover - depends on the machine
     settings_module = None
+    Gtk = None
 
 from voltaic import config as config_module  # noqa: E402
 from voltaic.model import Battery, Device  # noqa: E402
 
-needs_gtk = unittest.skipIf(settings_module is None, "GTK is not installed")
+
+def _has_display() -> bool:
+    """Can a window actually be constructed here?
+
+    Importing GTK only needs the typelib; building a Gtk.Window needs a
+    display. Checking the import alone made these tests pass on a desktop
+    and error on a headless runner, which is the wrong way round for a
+    suite that claims to run anywhere.
+    """
+    if Gtk is None:
+        return False
+    return Gtk.init_check([])[0]
+
+
+needs_gtk = unittest.skipUnless(
+    _has_display(), "needs GTK and a display (try xvfb-run)")
 
 
 def sample_devices():
