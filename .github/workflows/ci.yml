@@ -211,14 +211,29 @@ jobs:
           fi
           echo ".SRCINFO matches the PKGBUILD"
 
-      - name: Check the metadata parses and matches the release
+      # The PKGBUILD tracks the last *released* version, so it legitimately
+      # lags the working tree between tagging and bumping it. Only the
+      # nonsensical direction — packaging a version that does not exist yet
+      # — is an error.
+      - name: Compare the packaged version with the source
         run: |
-          su builder -c 'cd ~ && source PKGBUILD && echo "$pkgname $pkgver"'
-          grep -q "pkgver=$(python3 -c "
-          import re,pathlib
+          pkgver=$(su builder -c 'cd ~ && source PKGBUILD && echo "$pkgver"')
+          srcver=$(python3 -c "
+          import re, pathlib
           print(re.search(r'__version__ = \"([^\"]+)\"',
                 pathlib.Path('voltaic/__init__.py').read_text()).group(1))
-          ")" packaging/PKGBUILD
+          ")
+          echo "PKGBUILD: $pkgver   source: $srcver"
+          if [ "$pkgver" = "$srcver" ]; then
+            echo "in step"
+          elif [ "$(printf '%s\n%s\n' "$pkgver" "$srcver" | sort -V | head -1)" = "$pkgver" ]; then
+            echo "::notice::PKGBUILD is at $pkgver while the source is at"\
+                 "$srcver. Bump it after tagging v$srcver (see packaging/AUR.md)."
+          else
+            echo "::error::PKGBUILD is at $pkgver, ahead of the source at"\
+                 "$srcver — that version cannot exist."
+            exit 1
+          fi
 
   deb:
     name: Build .deb
