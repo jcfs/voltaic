@@ -23,6 +23,20 @@ running it alongside Solaar may cause either to miss notifications.
 .B \-\-list
 Print battery levels to standard output and exit. Does not require GTK.
 .TP
+.B \-\-keys
+With
+.BR \-\-list ,
+also print each device's configuration key, which is what a per-device
+setting is written against.
+.TP
+.B \-\-config
+Print the configuration file's path and the settings currently in effect,
+including the defaults for anything the file does not set.
+.TP
+.B \-\-write\-config
+Write the effective settings to the configuration file, creating it if
+needed, so it can be edited.
+.TP
 .BI \-\-interval " SECONDS"
 Seconds between background scans (default: 900). Opening the panel always
 refreshes it, so a long interval only makes the tray icon and the
@@ -48,6 +62,48 @@ Show the version and exit.
 .TP
 .B \-h ", " \-\-help
 Show a usage summary and exit.
+.SH CONFIGURATION
+Command-line flags only help when Voltaic is started from a terminal, and
+the desktop entry passes none, so settings live in
+.IR ~/.config/voltaic/config.json .
+A flag always overrides the file for that run.
+.PP
+The file holds the poll interval, whether to notify, the low-battery
+threshold, the preferred tray backend, which sources are enabled, and
+per-device settings:
+.PP
+.RS
+.EX
+{
+  "interval": 900.0,
+  "notify": true,
+  "low_percent": 20,
+  "tray": "auto",
+  "sources": { "hidpp": true, "airpods": true,
+               "upower": false, "bluez": false },
+  "devices": {
+    "hidraw3:1": { "name": "Desk keyboard" },
+    "airpods:A0:A3:09:3D:0A:83": { "hidden": true }
+  }
+}
+.EE
+.RE
+.PP
+A
+.I source
+is a family of hardware.
+.B hidpp
+and
+.B airpods
+are specific and on by default;
+.B upower
+and
+.B bluez
+are generic catch-alls for other accessories and are off, because they
+surface devices the desktop already reports. Changes to
+.I devices
+apply on the next scan, with no restart. Get a device's key from
+.BR "voltaic \-\-list \-\-keys" .
 .SH POLLING
 A scan is 25 HID++ requests and 175 bytes, so the radio traffic is
 irrelevant. What costs something is that pinging a sleeping device wakes it:

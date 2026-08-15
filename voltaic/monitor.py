@@ -15,7 +15,7 @@ import select
 import threading
 import time
 
-from . import airpods, hidpp, state
+from . import hidpp, state
 
 # How often to scan when nobody is looking.
 #
@@ -45,10 +45,14 @@ class Monitor(threading.Thread):
     touch the UI must marshal onto the main loop themselves.
     """
 
-    def __init__(self, on_update, interval: float = DEFAULT_INTERVAL):
+    def __init__(self, on_update, interval: float = DEFAULT_INTERVAL,
+                 sources=None):
         super().__init__(daemon=True, name="voltaic-monitor")
         self.on_update = on_update
         self.interval = interval
+        # Everything except HID++, which this class drives directly because
+        # it owns the file descriptors the notification loop parks on.
+        self.sources = [] if sources is None else list(sources)
         self._wake = threading.Event()
         self._stop = threading.Event()
         self._conns: list[hidpp.HidppDevice] = []
@@ -114,9 +118,9 @@ class Monitor(threading.Thread):
                         continue
                     raise
 
-            # Bluetooth accessories are independent of the hidraw side, so
-            # they are scanned even when no Logitech receiver is present.
-            devices.extend(self._scan_airpods())
+            # The other sources are independent of the hidraw side, so they
+            # are scanned even when no Logitech receiver is present.
+            devices.extend(self._scan_sources())
 
             # Only surface the receiver problem if it left us with nothing
             # at all to show; a user with just AirPods has no receiver and
@@ -133,13 +137,20 @@ class Monitor(threading.Thread):
             self._listen(devices, deadline=time.monotonic() + self.interval)
             self._close_connections()
 
-    @staticmethod
-    def _scan_airpods() -> list[hidpp.Device]:
-        try:
-            return airpods.enumerate_airpods()
-        except Exception:
-            # Bluetooth being unavailable must never take down the poll loop.
-            return []
+    def _scan_sources(self) -> list[hidpp.Device]:
+        """Every enabled non-HID++ source, in configuration order.
+
+        One source failing must not cost you the others, nor take down the
+        poll loop: a broken Bluetooth stack should still leave the mouse
+        readable.
+        """
+        found: list[hidpp.Device] = []
+        for source in self.sources:
+            try:
+                found.extend(source.scan())
+            except Exception:
+                continue
+        return found
 
     def _listen(self, devices: list[hidpp.Device], deadline: float) -> None:
         """Wait for the next scan, reacting to notifications in the meantime.

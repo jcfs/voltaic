@@ -10,6 +10,45 @@ part.
 
 ---
 
+## [1.4.0] — 2026-08-15
+
+**Voltaic is configurable, and can be taught about new hardware.** Until now
+it read exactly two device families, with settings that existed only as
+command-line flags — and the launcher entry passes none, so in normal use
+nothing could be changed at all.
+
+### Added
+
+- **A configuration file** at `~/.config/voltaic/config.json`, holding the
+  poll interval, notifications, the low-battery threshold, the tray backend,
+  which sources are enabled, and per-device settings. `voltaic --config`
+  shows where it lives and what is in effect; `voltaic --write-config`
+  creates it. A command-line flag still beats the file for one run.
+- **Per-device settings.** Rename a device, or hide it entirely — which is
+  how you get rid of an accessory you no longer own but which is still
+  remembered from the last time it was seen. `voltaic --list --keys` prints
+  the key to write the setting against. Changes apply on the next scan, with
+  no restart.
+- **Sources**, a small interface for a family of hardware, so support for new
+  devices is a class with a `scan()` rather than a change to the monitor.
+  Two new generic ones ship with it, both off by default:
+  - `upower` — anything UPower knows the charge of: gamepads, tablets,
+    phones, generic Bluetooth accessories.
+  - `bluez` — Bluetooth devices exposing the standard battery service.
+
+  They are off by default because they surface what the system already
+  knows, including a laptop battery the desktop is already showing.
+
+### Notes
+
+HID++ is deliberately not a source: it owns the file descriptors the monitor
+parks in `select()` between scans, which is what lets an unsolicited battery
+notification update the panel immediately instead of waiting out the poll
+interval. `upower` cannot replace it either — the kernel does not recognise
+every Logitech receiver, and a Bolt receiver yields no UPower devices at all.
+
+---
+
 ## [1.3.0] — 2026-08-15
 
 **Voltaic now works on Wayland**, and when it cannot show a tray icon it says
@@ -186,6 +225,7 @@ Initial release: Logitech battery over HID++, per-earbud AirPods battery over
 AAP, hover-to-open tray panel with three status-icon backends, offline device
 memory, and low-battery notifications.
 
+[1.4.0]: https://github.com/jcfs/voltaic/releases/tag/v1.4.0
 [1.3.0]: https://github.com/jcfs/voltaic/releases/tag/v1.3.0
 [1.2.2]: https://github.com/jcfs/voltaic/releases/tag/v1.2.2
 [1.2.1]: https://github.com/jcfs/voltaic/releases/tag/v1.2.1

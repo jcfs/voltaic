@@ -11,7 +11,8 @@ import gi
 gi.require_version("Gtk", "3.0")
 from gi.repository import GLib, Gtk  # noqa: E402
 
-from . import airpods, hidpp  # noqa: E402
+from . import airpods, hidpp, sources  # noqa: E402
+from . import config as config_module
 from .monitor import DEFAULT_INTERVAL, Monitor  # noqa: E402
 from .popup import VoltaicPopup, ensure_css  # noqa: E402
 from .tray import Tray  # noqa: E402
@@ -32,8 +33,13 @@ HOVER_SLACK = 26
 
 class VoltaicApp:
     def __init__(self, interval: float = DEFAULT_INTERVAL, notify: bool = True,
-                 tray_backend: str = "auto"):
+                 tray_backend: str = "auto", config: dict | None = None):
         ensure_css()
+        # Settings come from the config file; the caller passes whatever the
+        # command line overrode, which always wins for this run.
+        self.config = config if config is not None else config_module.load()
+        self.low_percent = int(self.config.get("low_percent",
+                                               LOW_BATTERY_PERCENT))
         self.devices: list[hidpp.Device] = []
         self.error: str | None = None
         self.notify_enabled = notify
@@ -62,7 +68,9 @@ class VoltaicApp:
         self.popup.hover_capable = self.tray.backend == "xembed"
         self.tray.set_state(None, False, "Voltaic — looking for devices…")
 
-        self.monitor = Monitor(self._on_update_threaded, interval=interval)
+        self.monitor = Monitor(
+            self._on_update_threaded, interval=interval,
+            sources=sources.build(config_module.enabled_sources(self.config)))
         self.monitor.start()
 
         # Keep the popup's "updated Ns ago" line honest while it is open.
@@ -87,6 +95,9 @@ class VoltaicApp:
         GLib.idle_add(self._on_update, devices, error)
 
     def _on_update(self, devices, error) -> bool:
+        # Hidden devices are dropped and renames applied here, so changing
+        # the config affects the next scan without a restart.
+        devices = config_module.apply_overrides(self.config, devices)
         self.devices = devices
         self.error = error
         self.tray.set_state(*self._summary())
@@ -137,7 +148,7 @@ class VoltaicApp:
             if not device.online or level is None or device.any_charging:
                 self._warned.discard(key)
                 continue
-            if level > LOW_BATTERY_PERCENT:
+            if level > self.low_percent:
                 self._warned.discard(key)
             elif key not in self._warned:
                 self._warned.add(key)
@@ -308,8 +319,8 @@ def _notify(summary: str, body: str) -> None:
 
 
 def run(interval: float = DEFAULT_INTERVAL, notify: bool = True,
-        tray_backend: str = "auto") -> int:
-    app = VoltaicApp(interval=interval, notify=notify,
+        tray_backend: str = "auto", config: dict | None = None) -> int:
+    app = VoltaicApp(interval=interval, notify=notify, config=config,
                      tray_backend=tray_backend)
     try:
         Gtk.main()

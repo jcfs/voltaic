@@ -185,6 +185,12 @@ voltaic --no-notify         # suppress low-battery notifications
 voltaic --tray xapp         # force a particular status-icon backend
 ```
 
+```sh
+voltaic --config           # where the settings live, and what is in effect
+voltaic --write-config     # write them out so they can be edited
+voltaic --list --keys      # device keys, for per-device settings
+```
+
 | Action | Result |
 | --- | --- |
 | Hover the icon | Panel opens; closes again when the pointer leaves |
@@ -196,6 +202,80 @@ voltaic --tray xapp         # force a particular status-icon backend
 The Connect button appears only for Bluetooth accessories. A Logitech device
 behind a receiver associates itself when you switch it on and cannot be
 summoned by the host, so offering a button there would be a lie.
+
+## Configuration
+
+Command-line flags only help if you start Voltaic from a terminal, and the
+normal way to start it is a launcher entry that passes none. Settings
+therefore live in a file:
+
+```sh
+voltaic --write-config      # ~/.config/voltaic/config.json
+```
+
+```json
+{
+  "interval": 900.0,
+  "notify": true,
+  "low_percent": 20,
+  "tray": "auto",
+  "sources": {
+    "hidpp": true,
+    "airpods": true,
+    "upower": false,
+    "bluez": false
+  },
+  "devices": {}
+}
+```
+
+A flag always beats the file, so `--interval 300` still works for one run
+without editing anything.
+
+### Sources
+
+A *source* is a family of hardware Voltaic can read. The two specific ones
+are on by default; the generic ones are off, because they surface whatever
+the system already knows about — including a laptop battery your desktop is
+already showing — and duplicating that is worse than showing nothing.
+
+| Source | Reads |
+| --- | --- |
+| `hidpp` | Logitech devices, spoken directly over `/dev/hidraw` |
+| `airpods` | AirPods and Beats, per earbud and case, over Apple's AAP |
+| `upower` | Anything UPower knows the charge of — gamepads, tablets, phones, generic Bluetooth accessories |
+| `bluez` | Bluetooth devices exposing the standard battery service, as a single blended figure |
+
+Turn one on by setting it to `true`. `upower` is the useful catch-all for
+hardware Voltaic has no specific support for; it cannot replace `hidpp`,
+because the kernel does not recognise every Logitech receiver — a Bolt
+receiver yields no UPower devices at all, which is why this project speaks
+HID++ directly in the first place.
+
+### Per-device settings
+
+Get a device's key from `voltaic --list --keys`, then:
+
+```json
+{
+  "devices": {
+    "hidraw3:1": { "name": "Desk keyboard" },
+    "airpods:A0:A3:09:3D:0A:83": { "hidden": true }
+  }
+}
+```
+
+`name` renames a device in the panel and in `--list`; `hidden` removes it
+entirely, which is how you get rid of an accessory you no longer use but
+which is still remembered from the last time it was seen. Changes apply on
+the next scan — no restart.
+
+### Adding support for other hardware
+
+Sources are a small interface on purpose. A new device family is a class
+with a `scan()` returning `Device` objects, plus a default in
+`config.DEFAULTS["sources"]` — see `voltaic/sources.py`. Contributions for
+hardware I cannot test are welcome; see [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Does polling drain the batteries?
 

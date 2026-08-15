@@ -1,3 +1,14 @@
+voltaic (1.4.0) unstable; urgency=medium
+
+  * Add a configuration file at ~/.config/voltaic/config.json: poll
+    interval, notifications, low-battery threshold, tray backend, enabled
+    sources and per-device settings. Flags still override it.
+  * Devices can be renamed or hidden individually.
+  * Add a source interface so new device families can be supported without
+    changing the monitor, with optional upower and bluez sources.
+
+ -- jcfs <jcfs@users.noreply.github.com>  Sat, 15 Aug 2026 18:30:00 +0000
+
 voltaic (1.3.0) unstable; urgency=medium
 
   * Show a tray icon on Wayland. The automatic backend order tried XEmbed
