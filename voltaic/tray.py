@@ -73,11 +73,12 @@ class Tray:
     """
 
     def __init__(self, on_toggle, on_refresh, on_quit, on_hover=None,
-                 preferred: str = "auto"):
+                 preferred: str = "auto", on_settings=None):
         self.on_toggle = on_toggle
         self.on_hover = on_hover
         self.on_refresh = on_refresh
         self.on_quit = on_quit
+        self.on_settings = on_settings
         self._icon_path: str | None = None
         self._size_hint = DEFAULT_ICON_SIZE
         self.backend = "none"
@@ -207,6 +208,11 @@ class Tray:
         autostart.set_active(is_autostart_enabled())
         autostart.connect("toggled", lambda item: set_autostart(item.get_active()))
         menu.append(autostart)
+
+        if self.on_settings is not None:
+            settings = Gtk.MenuItem(label="Settings…")
+            settings.connect("activate", lambda _i: self.on_settings())
+            menu.append(settings)
 
         menu.append(Gtk.SeparatorMenuItem())
 

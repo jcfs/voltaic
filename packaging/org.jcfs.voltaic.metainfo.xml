@@ -79,6 +79,12 @@
   <content_rating type="oars-1.1"/>
 
   <releases>
+    <release version="1.5.0" date="2026-08-15">
+      <description>
+        <p>Adds a settings window for the check interval, notifications,
+           device kinds, and renaming or hiding devices.</p>
+      </description>
+    </release>
     <release version="1.4.0" date="2026-08-15">
       <description>
         <p>Configurable at last: a settings file, per-device renaming and

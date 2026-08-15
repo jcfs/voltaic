@@ -63,10 +63,12 @@ Show the version and exit.
 .B \-h ", " \-\-help
 Show a usage summary and exit.
 .SH CONFIGURATION
-Command-line flags only help when Voltaic is started from a terminal, and
-the desktop entry passes none, so settings live in
-.IR ~/.config/voltaic/config.json .
-A flag always overrides the file for that run.
+Most settings are reachable from
+.B Settings\(rq
+in the tray icon's right-click menu. That window edits
+.IR ~/.config/voltaic/config.json ,
+which can equally be written by hand. A command-line flag always overrides
+the file for that run.
 .PP
 The file holds the poll interval, whether to notify, the low-battery
 threshold, the preferred tray backend, which sources are enabled, and

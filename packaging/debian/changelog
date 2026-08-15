@@ -1,3 +1,12 @@
+voltaic (1.5.0) unstable; urgency=medium
+
+  * Add a settings window, reached from the tray icon's menu: check
+    interval, notifications and threshold, tray icon style, which kinds of
+    device to look for, and renaming or hiding individual devices.
+  * Settings apply without a restart, except the tray icon style.
+
+ -- jcfs <jcfs@users.noreply.github.com>  Sat, 15 Aug 2026 19:15:00 +0000
+
 voltaic (1.4.0) unstable; urgency=medium
 
   * Add a configuration file at ~/.config/voltaic/config.json: poll

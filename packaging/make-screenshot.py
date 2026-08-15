@@ -136,9 +136,50 @@ def capture(popup: VoltaicPopup, path: str) -> None:
           f"scale {scale})")
 
 
+def shoot_settings(output: str) -> int:
+    """Capture the settings window.
+
+    A normal toplevel and the panel disagree about scaling: the panel is an
+    override-redirect ARGB window whose grab needs device pixels, while this
+    one is grabbed in logical coordinates and comes back at device
+    resolution. Asking for the wrong one gives either a quarter of the
+    window or a window with a black margin, so the two are captured
+    separately rather than sharing a helper.
+    """
+    from voltaic import config as config_module
+    from voltaic.settings import SettingsWindow
+
+    window = SettingsWindow(config_module.load(), sample_devices(),
+                            on_apply=lambda _config: None)
+    window.show_all()
+
+    def shoot():
+        gdk_window = window.get_window()
+        pixbuf = Gdk.pixbuf_get_from_window(
+            gdk_window, 0, 0,
+            gdk_window.get_width(), gdk_window.get_height())
+        if pixbuf is None:
+            raise SystemExit("could not grab the settings window")
+        pixbuf.savev(output, "png", [], [])
+        print(f"wrote {output} ({pixbuf.get_width()}x{pixbuf.get_height()})")
+        Gtk.main_quit()
+        return False
+
+    GLib.timeout_add(900, shoot)
+    Gtk.main()
+    return 0
+
+
 def main() -> int:
-    args = [a for a in sys.argv[1:] if a != "--connect"]
+    flags = {"--connect", "--settings"}
+    args = [a for a in sys.argv[1:] if a not in flags]
     connect_variant = "--connect" in sys.argv[1:]
+
+    if "--settings" in sys.argv[1:]:
+        here = os.path.dirname(os.path.abspath(__file__))
+        ensure_css()
+        return shoot_settings(
+            args[0] if args else os.path.join(here, "screenshot-settings.png"))
     here = os.path.dirname(os.path.abspath(__file__))
     default = "screenshot-connect.png" if connect_variant else "screenshot.png"
     output = args[0] if args else os.path.join(here, default)

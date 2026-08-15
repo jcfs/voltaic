@@ -41,7 +41,9 @@ class VoltaicApp:
         self.low_percent = int(self.config.get("low_percent",
                                                LOW_BATTERY_PERCENT))
         self.devices: list[hidpp.Device] = []
+        self.all_devices: list[hidpp.Device] = []
         self.error: str | None = None
+        self._settings_window = None
         self.notify_enabled = notify
         self._warned: set[str] = set()
 
@@ -63,6 +65,7 @@ class VoltaicApp:
                          on_hover=self.hover_popup,
                          on_refresh=self.refresh,
                          on_quit=self.quit,
+                         on_settings=self.open_settings,
                          preferred=tray_backend)
         # Only the XEmbed backend reports hover and icon geometry.
         self.popup.hover_capable = self.tray.backend == "xembed"
@@ -95,6 +98,9 @@ class VoltaicApp:
         GLib.idle_add(self._on_update, devices, error)
 
     def _on_update(self, devices, error) -> bool:
+        # Everything found, before hiding — the settings window lists these,
+        # so that a hidden device can still be brought back.
+        self.all_devices = list(devices)
         # Hidden devices are dropped and renames applied here, so changing
         # the config affects the next scan without a restart.
         devices = config_module.apply_overrides(self.config, devices)
@@ -154,6 +160,39 @@ class VoltaicApp:
                 self._warned.add(key)
                 _notify(f"{device.display_name} battery low",
                         f"{level}% remaining")
+
+    def open_settings(self) -> None:
+        """Show the settings window, or raise the one already open."""
+        if self._settings_window is not None:
+            self._settings_window.present()
+            return
+
+        from .settings import SettingsWindow
+        window = SettingsWindow(self.config, self.all_devices,
+                                on_apply=self.apply_config)
+        self._settings_window = window
+
+        def forget(_window):
+            self._settings_window = None
+        window.connect("destroy", forget)
+        window.show_all()
+
+    def apply_config(self, config: dict) -> None:
+        """Adopt saved settings without a restart, where that is possible.
+
+        The tray backend is the exception: it is chosen once, when the icon
+        is created, and the settings window says as much.
+        """
+        self.config = config
+        self.low_percent = int(config.get("low_percent", LOW_BATTERY_PERCENT))
+        self.notify_enabled = bool(config.get("notify", True))
+        self.monitor.interval = float(config.get("interval", DEFAULT_INTERVAL))
+        self.monitor.sources = sources.build(
+            config_module.enabled_sources(config))
+        # Re-render immediately so a rename or a newly hidden device is
+        # visible now rather than at the next scan.
+        self._on_update(self.all_devices, self.error)
+        self.refresh()
 
     def _tick_footer(self) -> bool:
         if self.popup.get_visible():

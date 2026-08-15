@@ -10,6 +10,35 @@ part.
 
 ---
 
+## [1.5.0] — 2026-08-15
+
+**A settings window.** Configuration arrived in 1.4.0 as a JSON file, which
+is a fine source of truth and a poor user interface — telling someone to
+hand-edit JSON is not a settings system.
+
+### Added
+
+- **Settings…** in the tray icon's right-click menu, opening a window with
+  three tabs:
+  - *General* — how often to check, low-battery notifications and the
+    threshold, and the tray icon style.
+  - *Devices* — which kinds of hardware to look for, each explained in
+    plain terms rather than by protocol name.
+  - *My devices* — rename any device, or untick it to hide it.
+- Settings apply immediately where they can. Only the tray icon style needs
+  a restart, and the window says so rather than pretending otherwise.
+
+### Notes
+
+The window edits the same `config.json` the command line reads, so the file
+stays the source of truth and nothing is hidden behind the UI.
+
+A hidden device still appears in *My devices*, unticked — otherwise it could
+never be brought back without editing the file, which is the problem this
+release exists to solve.
+
+---
+
 ## [1.4.0] — 2026-08-15
 
 **Voltaic is configurable, and can be taught about new hardware.** Until now
@@ -225,6 +254,7 @@ Initial release: Logitech battery over HID++, per-earbud AirPods battery over
 AAP, hover-to-open tray panel with three status-icon backends, offline device
 memory, and low-battery notifications.
 
+[1.5.0]: https://github.com/jcfs/voltaic/releases/tag/v1.5.0
 [1.4.0]: https://github.com/jcfs/voltaic/releases/tag/v1.4.0
 [1.3.0]: https://github.com/jcfs/voltaic/releases/tag/v1.3.0
 [1.2.2]: https://github.com/jcfs/voltaic/releases/tag/v1.2.2

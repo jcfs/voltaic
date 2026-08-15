@@ -205,9 +205,16 @@ summoned by the host, so offering a button there would be a lie.
 
 ## Configuration
 
-Command-line flags only help if you start Voltaic from a terminal, and the
-normal way to start it is a launcher entry that passes none. Settings
-therefore live in a file:
+Right-click the tray icon and choose **Settings…**: how often to check,
+low-battery notifications and their threshold, the tray icon style, which
+kinds of device to look for, and renaming or hiding individual devices.
+Everything applies immediately except the tray icon style, which is chosen
+when the icon is created.
+
+![The settings window](packaging/screenshot-settings.png)
+
+The window edits a plain file, which you can also write by hand or manage
+with your dotfiles:
 
 ```sh
 voltaic --write-config      # ~/.config/voltaic/config.json
@@ -268,7 +275,8 @@ Get a device's key from `voltaic --list --keys`, then:
 `name` renames a device in the panel and in `--list`; `hidden` removes it
 entirely, which is how you get rid of an accessory you no longer use but
 which is still remembered from the last time it was seen. Changes apply on
-the next scan — no restart.
+the next scan — no restart. The **My devices** tab of the settings window
+does the same thing without the JSON.
 
 ### Adding support for other hardware
 
