@@ -1,3 +1,17 @@
+voltaic (1.3.0) unstable; urgency=medium
+
+  * Show a tray icon on Wayland. The automatic backend order tried XEmbed
+    first, which under Wayland constructs without error and then displays
+    nothing, so Voltaic ran with no icon and no complaint. Affected GNOME
+    and KDE on Wayland, the default session on current Ubuntu and Fedora.
+  * Report why there is no tray icon, in a notification and on stderr,
+    rather than running invisibly.
+  * The empty panel no longer tells AirPods-only users to check a Logitech
+    receiver they do not own.
+  * Fix a PyGIWarning from importing Gdk without a version guard.
+
+ -- jcfs <jcfs@users.noreply.github.com>  Sat, 15 Aug 2026 17:00:00 +0000
+
 voltaic (1.2.2) unstable; urgency=medium
 
   * Fix source installs on Debian and Ubuntu, which need python3-venv for

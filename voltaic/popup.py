@@ -427,9 +427,15 @@ class VoltaicPopup(Gtk.Window):
             message.set_max_width_chars(38)
             self.content.pack_start(message, False, False, 0)
         elif not devices:
+            # Not Logitech-only: someone running this purely for AirPods
+            # would otherwise be told to check a receiver they do not own.
             message = Gtk.Label(
-                label="No Logitech devices found.\nCheck the receiver is plugged in.",
+                label="No devices found.\n"
+                      "Plug in a Logitech receiver, or connect an accessory "
+                      "over Bluetooth.",
                 xalign=0.0)
+            message.set_line_wrap(True)
+            message.set_max_width_chars(38)
             message.get_style_context().add_class("voltaic-empty")
             self.content.pack_start(message, False, False, 0)
         else:

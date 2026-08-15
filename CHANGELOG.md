@@ -1,155 +1,194 @@
 # Changelog
 
-All notable changes to this project are documented here. The format follows
-[Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow
+Every notable change to Voltaic, newest first. The format follows
+[Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and versions follow
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+Entries say *why* as well as *what* — several of these bugs were invisible
+from the machine they were written on, and the reason is usually the useful
+part.
+
+---
+
+## [1.3.0] — 2026-08-15
+
+**Voltaic now works on Wayland**, and when it cannot show a tray icon it says
+so instead of running invisibly.
 
 ### Fixed
 
 - **No tray icon at all on Wayland.** `auto` tried XEmbed first, and
-  `Gtk.StatusIcon` under Wayland constructs without error, is never
-  embedded, and shows nothing — so the process ran with no icon and no
-  complaint. Confirmed against a headless Weston: `is_embedded()` and
-  `get_geometry()` both return False. Voltaic now detects a Wayland display
-  and starts at the `xapp` backend instead. This affected GNOME and KDE on
-  Wayland, which is the default session on current Ubuntu and Fedora.
-- **Silence when no tray exists at all.** A few seconds after start-up
-  Voltaic now says why there is no icon — in a notification and on standard
-  error — naming the extension to install, instead of leaving a running
-  process and an empty panel area. This also covers XEmbed on X11 where no
-  tray accepted the icon.
-- `Gdk` and `GdkPixbuf` were imported without a version guard, which
-  produced a `PyGIWarning` on start-up.
+  `Gtk.StatusIcon` under Wayland constructs without error, is never embedded,
+  and displays nothing — so the process ran with no icon, no error, and no way
+  to tell it apart from a crash. Voltaic now detects a Wayland display and
+  starts at the `xapp` backend instead.
 
-## [1.2.2] - 2026-08-15
+  Confirmed against a headless Weston rather than assumed:
+
+  ```
+  StatusIcon constructed: True
+  is_embedded():          False
+  geometry:               False
+  ```
+
+  This affected GNOME and KDE on Wayland — the default session on current
+  Ubuntu and Fedora.
+
+- **Silence when no tray exists.** Four seconds after start-up Voltaic reports
+  why no icon appeared, in a notification and on standard error, naming the
+  extension to install. Previously "no tray on this desktop" and "working
+  normally" looked identical from the outside. Also covers XEmbed on X11 where
+  no tray accepted the icon.
+
+- **The empty panel assumed a Logitech user.** It read *"No Logitech devices
+  found. Check the receiver is plugged in"* even for someone running Voltaic
+  purely for AirPods, telling them to check hardware they do not own.
+
+- A `PyGIWarning` on start-up, from importing `Gdk` and `GdkPixbuf` without a
+  version guard.
+
+### Internal
+
+- Wayland is detected from the `GdkDisplay` type, not `XDG_SESSION_TYPE`: an
+  X11 app under XWayland reports `wayland` while having a perfectly good
+  display to embed into, so the environment variable would have caused the
+  opposite bug.
+- 8 new tests for backend selection, run headless with the session stubbed.
+  The suite is now 101 tests.
+
+---
+
+## [1.2.2] — 2026-08-15
 
 Installing from source was broken on Debian, Ubuntu and openSUSE. All three
 bugs were found by running the install paths on those distributions for the
-first time — none of them could be seen from a Debian-family development
-machine or from the `.deb`, which is the one route that uses no virtualenv.
+first time. None were visible from a Debian-family development machine, and
+none were visible through the `.deb` — the one route that uses no virtualenv,
+and therefore the one route that could not reveal them.
 
 ### Fixed
 
-- **Debian and Ubuntu source installs were broken.** `python3 -m venv` needs
-  `python3-venv`, which Debian and Ubuntu split out of the standard library
-  and do not install by default, so `make install` and `install.sh` both
-  died with "ensurepip is not available". `.deb` users were never affected.
-- **openSUSE installs were broken.** `install.sh` and the README asked for
-  `gtk3`, which on openSUSE carries no Python typelib, so the install
-  reported success while the tray could not start at all. The correct
-  packages are `typelib-1_0-Gtk-3_0` and `typelib-1_0-XApp-1_0`.
-- `install.sh` now verifies that GTK 3 and pycairo are actually importable
-  after installing them, and fails loudly rather than claiming success —
-  this is what the openSUSE bug slipped past.
-- `install.sh` works when run as root, where `sudo` may not exist, and
-  survives a machine with no running udev instead of aborting.
-- `make uninstall` now says how to remove the udev rules, which it cannot
+- **Debian and Ubuntu source installs.** `python3 -m venv` needs
+  `python3-venv`, which both distributions split out of the standard library
+  and do not install by default. Installs died with `ensurepip is not
+  available`. `.deb` users were never affected.
+- **openSUSE source installs.** The GTK typelib lives in `typelib-1_0-Gtk-3_0`,
+  not `gtk3`. The install reported success and `voltaic --version` worked,
+  while the tray could never start — `Namespace Gtk not available for version
+  3.0`.
+- **`install.sh` could not tell "installed" from "usable".** It trusted the
+  package manager's exit code, which is exactly how the openSUSE bug passed
+  silently. It now imports Gtk and cairo afterwards and fails loudly, pointing
+  at the issue tracker.
+- `install.sh` runs as root, where `sudo` may not exist, and no longer aborts
+  on a machine with no running udev.
+- `make uninstall` explains how to remove the udev rules, which it cannot
   remove itself without root.
 
 ### Added
 
-- CI runs `install.sh` end to end on Fedora, Arch, openSUSE, Debian and
-  Ubuntu containers, and builds the PKGBUILD on Arch. Both were advertised
-  in the README while never having been executed anywhere.
+- CI runs `install.sh` end to end on Debian, Ubuntu, Fedora, Arch and openSUSE
+  containers, and builds the PKGBUILD on Arch — on every push. Both were
+  advertised in the README while never having been executed anywhere.
 
-## [1.2.1] - 2026-08-15
+---
+
+## [1.2.1] — 2026-08-15
 
 ### Added
 
-- **A signed apt repository**, so Debian, Ubuntu and Mint users can
-  `apt install voltaic` and then get new versions with `apt upgrade`, rather
-  than downloading a `.deb` by hand and having to notice each release. It is
-  published to <https://jcfs.github.io/voltaic> from every tagged build.
+- **A signed apt repository** at <https://jcfs.github.io/voltaic>, so Debian,
+  Ubuntu and Mint users can `apt install voltaic` and get new versions with
+  `apt upgrade`, rather than downloading a `.deb` and having to notice each
+  release. Rebuilt and re-signed on every tagged release.
 - A manual page (`man voltaic`), a Debian-format changelog, and DEP-5
   machine-readable copyright.
 - AppStream metadata, so Voltaic appears in GNOME Software, KDE Discover and
   the Mint software manager with a description and screenshots instead of a
   bare package name.
-- Tests for the HID++ reply matcher and the cairo tray icon, taking the
-  suite to 93 tests; coverage is measured and gated in CI.
+- Tests for the HID++ reply matcher and the cairo tray icon; coverage is
+  measured and gated in CI.
 
 ### Fixed
 
 - The `.deb` was missing a changelog and a manual page, which any archive
-  would reject or flag. The package is now lintian-clean, with CI failing on
-  any error or warning.
+  would reject or flag. The package is lintian-clean, and CI fails on any
+  error or warning.
 
-## [1.2.0] - 2026-08-14
+---
 
-Installation was the biggest barrier to actually using this: every route
-went through "install these GTK packages yourself, then run three make
-targets". Native packages fix that properly, because a distro package is
-the only format that can both declare the GTK dependencies *and* ship the
-udev rules — a Flatpak or AppImage can do neither, and the udev rules are
-not optional.
+## [1.2.0] — 2026-08-14
+
+Installing meant "install these GTK packages yourself, then run three make
+targets". Native packages fix that properly: a distro package is the only
+format that can both declare the GTK dependencies *and* ship the udev rules.
+A Flatpak or AppImage can do neither, and the udev rules are not optional.
 
 ### Added
 
-- **Debian package.** `sudo apt install ./voltaic_*_all.deb` is now the
-  entire install on Debian, Ubuntu and Mint: dependencies come from the
-  package manager, the udev rules ship inside the package, and the
-  post-install step replays them against an already-plugged-in receiver, so
-  there is nothing to configure and nothing to replug. Build one with
-  `make deb`.
+- **Debian package.** `sudo apt install ./voltaic_*_all.deb` is the entire
+  install: dependencies come from the package manager, the udev rules ship
+  inside the package, and the post-install step replays them against an
+  already-connected receiver — so there is nothing to configure and nothing to
+  replug. Build one with `make deb`.
 - **PKGBUILD** for Arch and Manjaro.
 - **`install.sh`** for everything else — detects the distribution, prints
-  exactly what it will run, and asks before touching anything. Recognises
-  the Debian, Fedora, Arch and openSUSE families.
+  exactly what it will run, and asks before touching anything.
 - CI builds the `.deb`, installs it on a clean runner to prove the declared
-  dependencies are satisfiable and the maintainer scripts run, and attaches
-  it to tagged releases.
+  dependencies are satisfiable, and attaches it to tagged releases.
 
-### Changed
+---
 
-- The README leads with the one-command installs; building from source is
-  now the last option rather than the only one.
-
-## [1.1.0] - 2026-08-14
+## [1.1.0] — 2026-08-14
 
 ### Added
 
 - Application icon, installed into the hicolor theme, so Voltaic appears in
-  application launchers with its own artwork instead of a generic battery
-  glyph.
+  launchers with its own artwork instead of a generic battery glyph.
 - Headless unit tests covering HID++ report-descriptor parsing, the AAP
   battery frame, the voltage curve, the device model and the offline cache.
 - GitHub Actions CI: tests on Python 3.9–3.13 with no GTK installed, `ruff`
   lint, package build, and validation of the desktop entry and udev rules.
-- `make test` target, and `packaging/make-screenshot.py` to regenerate the
-  README images from the real panel.
-- Troubleshooting section in the README, and install instructions for
-  Debian/Ubuntu, Fedora, Arch and openSUSE.
+- `make test`, and `packaging/make-screenshot.py` to regenerate the README
+  images from the real panel.
+- Troubleshooting section, and install instructions for Debian/Ubuntu, Fedora,
+  Arch and openSUSE.
 
 ### Changed
 
-- `make install` now installs into a private virtualenv created with
+- `make install` uses a private virtualenv created with
   `--system-site-packages` instead of `pip install --user`, which is refused
-  outright on distributions that enforce PEP 668 (Ubuntu 24.04, Debian 12,
-  Fedora 39 and later). The installed desktop entry uses an absolute `Exec`
-  path, since launchers do not reliably have `~/.local/bin` on PATH.
-- The battery gauge shows the number alone; the `%` glyph was pushing the
-  digits off the centre of the ring.
-- The udev rules file is named `60-voltaic.rules` rather than
-  `99-voltaic.rules`. systemd applies the `uaccess` ACL from
-  `73-seat-late.rules`, so a rules file that sorts after it sets the tag too
-  late, the ACL is never added, and the hidraw node silently stays
-  `root:root 0600`.
+  outright on distributions enforcing
+  [PEP 668](https://peps.python.org/pep-0668/) — Ubuntu 24.04, Debian 12 and
+  Fedora 39 among them. The installed desktop entry uses an absolute `Exec`
+  path, since launchers do not reliably have `~/.local/bin` on `PATH`.
+- The battery gauge shows the number alone; the `%` glyph pushed the digits
+  off the centre of the ring.
+- The udev rules file is `60-voltaic.rules`, not `99-`. systemd applies the
+  `uaccess` ACL from `73-seat-late.rules`, so a rules file sorting after it
+  sets the tag too late, the ACL is never added, and the hidraw node silently
+  stays `root:root 0600`.
 
 ### Fixed
 
-- A missing GTK stack produced a bare `ModuleNotFoundError` traceback, which
-  is invisible when launched from a desktop entry — the app simply appeared
-  not to start. It now names the packages to install, and falls back through
-  zenity, kdialog, xmessage and notify-send so the message is seen without a
-  terminal.
-- Bluetooth failures were swallowed silently, making "PyGObject is missing",
-  "BlueZ is not answering" and "no AirPods paired" indistinguishable from
-  each other. Each is now reported.
+- A missing GTK stack produced a bare `ModuleNotFoundError`, invisible when
+  launched from a desktop entry — the app simply appeared not to start. It now
+  names the packages to install and falls back through zenity, kdialog,
+  xmessage and notify-send so the message is seen without a terminal.
+- Bluetooth failures were swallowed, making "PyGObject missing", "BlueZ not
+  answering" and "no AirPods paired" indistinguishable. Each is now reported.
 
-## [1.0.0] - 2026-07-28
+---
+
+## [1.0.0] — 2026-07-28
 
 Initial release: Logitech battery over HID++, per-earbud AirPods battery over
 AAP, hover-to-open tray panel with three status-icon backends, offline device
 memory, and low-battery notifications.
+
+[1.3.0]: https://github.com/jcfs/voltaic/releases/tag/v1.3.0
+[1.2.2]: https://github.com/jcfs/voltaic/releases/tag/v1.2.2
+[1.2.1]: https://github.com/jcfs/voltaic/releases/tag/v1.2.1
+[1.2.0]: https://github.com/jcfs/voltaic/releases/tag/v1.2.0
+[1.1.0]: https://github.com/jcfs/voltaic/releases/tag/v1.1.0
+[1.0.0]: https://github.com/jcfs/voltaic/releases/tag/v1.0.0
