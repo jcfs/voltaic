@@ -1,3 +1,12 @@
+voltaic (1.5.1) unstable; urgency=medium
+
+  * Fix the optional upower source, which never returned a device: the
+    properties call named a symbol that does not exist and a blanket
+    exception handler hid it. Only affected users who had enabled it.
+  * Test the upower and bluez sources against mocked D-Bus services.
+
+ -- jcfs <jcfs@users.noreply.github.com>  Sat, 15 Aug 2026 19:45:00 +0000
+
 voltaic (1.5.0) unstable; urgency=medium
 
   * Add a settings window, reached from the tray icon's menu: check
