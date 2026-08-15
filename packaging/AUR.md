@@ -37,6 +37,11 @@ The repository must contain `PKGBUILD` and `.SRCINFO` at its root — not the
 
 ## Updating for a new release
 
+**Order matters: tag first, then bump the PKGBUILD.** A PKGBUILD names a
+tarball that only exists once the tag is pushed, so bumping `pkgver` ahead
+of the tag points it at a 404. CI knows this and skips the download while
+the tag is missing, but the package itself is not buildable until it exists.
+
 `.SRCINFO` is generated, never edited by hand, and the AUR rejects a push
 where it disagrees with the PKGBUILD.
 

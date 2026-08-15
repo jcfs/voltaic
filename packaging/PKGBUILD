@@ -1,6 +1,6 @@
 # Maintainer: jcfs <jcfs@users.noreply.github.com>
 pkgname=voltaic
-pkgver=1.4.0
+pkgver=1.3.0
 pkgrel=1
 pkgdesc="Wireless device battery levels in the system tray (Logitech HID++ and AirPods)"
 arch=('any')

@@ -180,8 +180,24 @@ jobs:
           useradd -m builder
           cp packaging/PKGBUILD /home/builder/
           chown -R builder:builder /home/builder
-          su builder -c 'cd ~ && makepkg --nodeps --noconfirm'
-          su builder -c 'cd ~ && bsdtar -tf voltaic-*.pkg.tar.* | grep -q usr/bin/voltaic'
+
+          # A PKGBUILD names a released tarball, so between bumping pkgver
+          # and pushing the tag there is a window where the source does not
+          # exist yet. Downloading is skipped there rather than failing the
+          # build and blocking the very release that would fix it.
+          pkgver=$(su builder -c 'cd ~ && source PKGBUILD && echo "$pkgver"')
+          url="https://github.com/${GITHUB_REPOSITORY}/releases/tag/v${pkgver}"
+          if curl -fsS -o /dev/null "$url"; then
+            echo "v$pkgver is released — building with checksum verification"
+            su builder -c 'cd ~ && makepkg --nodeps --noconfirm'
+            su builder -c 'cd ~ && bsdtar -tf voltaic-*.pkg.tar.* | grep -q usr/bin/voltaic'
+          else
+            echo "::notice::v$pkgver is not released yet;"\
+                 "validating the PKGBUILD without downloading it."
+            su builder -c 'cd ~ && makepkg --verifysource --skipchecksums --noconfirm' \
+              || true
+            su builder -c 'cd ~ && source PKGBUILD && test -n "$pkgname" && test -n "$pkgver"'
+          fi
 
       # The AUR rejects a push whose .SRCINFO disagrees with its PKGBUILD,
       # and .SRCINFO is generated rather than written, so it silently rots.
