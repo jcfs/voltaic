@@ -237,7 +237,7 @@ The status icon has three backends, chosen automatically in this order:
 
 | Backend | Hover | Notes |
 | --- | --- | --- |
-| `xembed` | yes | Legacy `Gtk.StatusIcon`. The only backend that reports both a hover signal and the icon's screen rectangle, which is what makes hover-to-open possible. |
+| `xembed` | yes | Legacy `Gtk.StatusIcon`. The only backend that reports both a hover signal and the icon's screen rectangle, which is what makes hover-to-open possible. **X11 only** — skipped automatically under Wayland. |
 | `xapp` | no | `XAppStatusIcon`, native to Cinnamon/MATE/Xfce. Gives click coordinates but has no enter/leave signal, so hover falls back to a text tooltip. |
 | `appindicator` | no | SNI. No coordinates and no plain left click, so the panel is opened from a menu entry. |
 
@@ -339,12 +339,14 @@ make coverage  # the same, under coverage, with a floor
 make verify    # tray hover/click behaviour; needs a real desktop
 ```
 
-93 tests, covering the HID++ transport against a fake hidraw node, the AAP
+101 tests, covering the HID++ transport against a fake hidraw node, the AAP
 frame decoder, the voltage curve, the device model, the offline cache, the
-colour palette and the rendered tray icon. Coverage of those modules is
-**53%**; the GTK layer (`app.py`, `popup.py`, `tray.py`) is at 0% and is
-exercised by `make verify` against a live desktop instead, since a tray icon
-and a hover panel cannot be meaningfully unit-tested.
+colour palette, the rendered tray icon, and tray backend selection.
+
+Coverage is **53%** across the modules unit tests can reach, and **33%**
+counting the GTK layer. `app.py` and `popup.py` sit at 0%: a hover panel
+cannot be meaningfully unit-tested, so they are exercised by `make verify`
+against a live desktop instead.
 
 The protocol and model layers are standard library only, which is what lets
 `make test` run in CI on a machine with no GTK and no hardware. Keep it that
