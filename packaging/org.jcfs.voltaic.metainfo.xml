@@ -79,6 +79,12 @@
   <content_rating type="oars-1.1"/>
 
   <releases>
+    <release version="1.2.1" date="2026-08-15">
+      <description>
+        <p>A signed apt repository, a manual page, and software-centre
+           metadata.</p>
+      </description>
+    </release>
     <release version="1.2.0" date="2026-08-14">
       <description>
         <p>One-command install on every major distribution.</p>

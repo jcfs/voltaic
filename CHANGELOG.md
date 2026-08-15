@@ -4,6 +4,28 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.1] - 2026-08-15
+
+### Added
+
+- **A signed apt repository**, so Debian, Ubuntu and Mint users can
+  `apt install voltaic` and then get new versions with `apt upgrade`, rather
+  than downloading a `.deb` by hand and having to notice each release. It is
+  published to <https://jcfs.github.io/voltaic> from every tagged build.
+- A manual page (`man voltaic`), a Debian-format changelog, and DEP-5
+  machine-readable copyright.
+- AppStream metadata, so Voltaic appears in GNOME Software, KDE Discover and
+  the Mint software manager with a description and screenshots instead of a
+  bare package name.
+- Tests for the HID++ reply matcher and the cairo tray icon, taking the
+  suite to 93 tests; coverage is measured and gated in CI.
+
+### Fixed
+
+- The `.deb` was missing a changelog and a manual page, which any archive
+  would reject or flag. The package is now lintian-clean, with CI failing on
+  any error or warning.
+
 ## [1.2.0] - 2026-08-14
 
 Installation was the biggest barrier to actually using this: every route

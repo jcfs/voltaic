@@ -1,3 +1,14 @@
+voltaic (1.2.1) unstable; urgency=medium
+
+  * Published to a signed apt repository at https://jcfs.github.io/voltaic,
+    so updates arrive with apt upgrade rather than by hand.
+  * Manual page, Debian-format changelog and DEP-5 copyright: the package is
+    now lintian-clean.
+  * AppStream metadata, so the app appears in software centres with a
+    description and screenshots.
+
+ -- jcfs <jcfs@users.noreply.github.com>  Sat, 15 Aug 2026 09:00:00 +0000
+
 voltaic (1.2.0) unstable; urgency=medium
 
   * Debian package, PKGBUILD and install.sh: installing is now one command
